@@ -3,6 +3,8 @@
 A visual explainer of text generation in chat apps. Plain HTML, CSS and JavaScript: no
 framework, no build step, no npm. Design: edulab (edustyl tokens).
 
+**Live:** https://workszop.github.io/chat-gen/ (GitHub Pages from `main`)
+
 Left: what you see – a chat window where the answer appears token by token.
 Right: what happens behind it, in five stages:
 
