@@ -1,6 +1,7 @@
 # How a chat writes its answer
 
-A visual explainer of text generation in chat apps, built with [Astryx](https://github.com/meta/astryx) (Meta's open-source React design system, v0.7.11).
+A visual explainer of text generation in chat apps. Plain HTML, CSS and JavaScript: no
+framework, no build step, no npm. Design: edulab (edustyl tokens).
 
 Left: what you see – a chat window where the answer appears token by token.
 Right: what happens behind it, in five stages:
@@ -16,68 +17,63 @@ Right: what happens behind it, in five stages:
 5. **Stop** – the model picks the end-of-turn token; the same question's answers at every
    temperature are shown side by side.
 
-Example questions (answers of ~20–80 tokens that change visibly with temperature):
-"Describe a sunny morning in two sentences.", "Write a haiku about autumn.",
-"Describe the perfect pizza in two sentences."
+## Files
 
-All numbers are real: `src/explainer/traces.json` was recorded from
-`HuggingFaceTB/SmolLM2-135M-Instruct` on CPU with `scripts/record_traces.py`
-(one run per question and temperature; probabilities over the full vocabulary at that
-run's temperature, top 10 kept per step).
-
-## Live model: LFM3-1.7B in the browser
-
-The **Model** picker in the top bar switches from the recorded SmolLM2 traces to
-[LiquidAI LFM3-1.7B](https://huggingface.co/LiquidAI/LFM3-1.7B) running live in the browser
-(`onnx-community/LFM3-1.7B-ONNX`, transformers.js 4.3). The browser downloads the model once
-(about 1.3 GB, 4-bit `q4`, kept in its cache), then you type a question and the model writes
-one answer per temperature, up to 200 tokens each, in a web worker. Even with thinking off,
-LFM3 often writes a draft, closes it with `</think>` and then writes the final answer; the chat
-shows the text as the answer until that marker appears, then folds it into a "Thinking" block,
-as chat apps do. Needs WebGPU (Chrome or
-Edge); the page checks for it before offering the download. Same setup as workszop/qwen:
-`q4` = 4-bit weights with 32-bit maths, because `q4f16` overflows on WebGPU and the answers
-turn into garbage. There is no CPU fallback: the 4-bit export uses `GatherBlockQuantized`,
-which the browser's WebAssembly runtime lacks (Node's native runtime has it).
-
-Every step records the same data as the recorder script – the top 10 candidates with their
-chances at that temperature, the drawn token and the text it adds – so all five stages work on
-your own question. How the draw works (`src/explainer/live/engine.ts`): a logits processor
-takes the model's real scores, computes softmax(scores / T) (one-hot at T = 0), draws a token
-with a seeded random generator, records the step and masks every other token so the greedy
-step takes exactly that token. Thinking is switched off, so the template holds an empty
-`<think></think>` block.
-
-Files: `src/explainer/live/{config,engine,worker,useLiveModel}.ts`. Node smoke test on the
-CPU (downloads the model to the transformers.js cache):
-
-```bash
-node scripts/live-smoke.mjs "Write a haiku about autumn."
-```
+| File | What it is |
+|---|---|
+| `index.html` | the whole app: markup, CSS (edulab tokens inlined) and JavaScript |
+| `traces.js` | recorded SmolLM2 traces (`window.TRACES = …`), written by the recorder |
+| `scripts/record_traces.py` | records the traces from the real model |
+| `favicon.svg`, `favicon-*.png`, `apple-touch-icon.png`, `icon-512.png` | edulab favicon |
 
 ## Run
 
 ```bash
-npm install
-npm run dev        # explainer at /, earlier component showcase at /#showcase
+python3 -m http.server 5180   # then open http://127.0.0.1:5180/
 ```
 
-Re-record the traces (needs `uv`; downloads CPU PyTorch + transformers):
+The recorded mode also works straight from `file://`. The live mode needs the page served
+over http(s), because the browser keeps the downloaded model in its cache.
+
+## Recorded mode: SmolLM2-135M-Instruct
+
+All numbers are real: `traces.js` was recorded from `HuggingFaceTB/SmolLM2-135M-Instruct` on
+CPU (one run per question and temperature; probabilities over the full vocabulary at that
+run's temperature, top 10 kept per step). Example questions: "Describe a sunny morning in two
+sentences.", "Write a haiku about autumn.", "Describe the perfect pizza in two sentences."
+
+Re-record (needs `uv`; downloads CPU PyTorch + transformers):
 
 ```bash
 uv run --no-project --python 3.12 --index https://download.pytorch.org/whl/cpu \
   --index-strategy unsafe-best-match --with torch --with transformers \
-  -- python scripts/record_traces.py src/explainer/traces.json
+  -- python scripts/record_traces.py traces.js
 ```
 
-## Edulab theme
+## Live mode: LFM3-1.7B in the browser
 
-`src/themes/edulab/edulabTheme.ts` is the edustyl "Editorial Color" design system as an
-Astryx theme (extends Neutral): white paper, stone muted fills, yellow primary with dark ink,
-blue / green / grape / red solid chips, Outfit + IBM Plex Sans + Roboto Mono, generous radii,
-warm shadows. It is the only theme (the other Astryx themes and the theme / colour-mode switchers were
-removed) and **light only**. Fonts load via `<link>` tags in `index.html`.
+The **Model** picker switches to [LiquidAI LFM3-1.7B](https://huggingface.co/LiquidAI/LFM3-1.7B)
+running in the browser (`onnx-community/LFM3-1.7B-ONNX`, transformers.js 4.3.2 from jsDelivr).
+The page keeps its two panels: the right one explains how the live mode works and offers the
+download (about 1.3 GB, 4-bit `q4`, kept in the browser cache); after that you type a question
+and the model writes one answer per temperature, up to 200 tokens each, while the chat on the
+left shows the text being written. Then the regular step-by-step view replays the real run.
 
-```bash
-npm run astryx -- theme build src/themes/edulab/edulabTheme.ts   # after editing the theme
-```
+Every step records the same data as the recorder script – the top 10 candidates with their
+chances at that temperature, the drawn token and the text it adds. A logits processor takes
+the model's real scores, computes softmax(scores / T) (one-hot at T = 0), draws a token with a
+seeded random generator, records the step and masks every other token so the greedy step
+takes exactly that token. Thinking is switched off, so the template holds an empty
+`<think></think>` block; LFM3 still often writes a draft, closes it with `</think>` and then
+writes the final answer – the chat folds that draft into a "Thinking" block, as chat apps do.
+
+Needs WebGPU (Chrome or Edge); the page checks for it before offering the download. Same setup
+as workszop/qwen: `q4` = 4-bit weights with 32-bit maths, because `q4f16` overflows on WebGPU
+and the answers turn into garbage. There is no CPU fallback: the 4-bit export uses
+`GatherBlockQuantized`, which the browser's WebAssembly runtime lacks.
+
+## DOM contract
+
+`#app` carries `data-trace`, `data-stage`, `data-step`, `data-temperature`,
+`data-answer-length`, `data-playing`, `data-source` and `data-live-status`. Probability rows
+carry `data-chosen="true"` for the picked token, Stop-stage rows `data-run`.

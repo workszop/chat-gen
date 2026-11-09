@@ -5,7 +5,7 @@ stores, at every step, the top-10 candidates with their probability at that
 run's temperature and the token that was actually drawn. Temperature 0 means
 "always take the most likely token" (greedy), so its chances are one-hot.
 
-Usage: python scripts/record_traces.py src/explainer/traces.json
+Usage: python scripts/record_traces.py traces.js
 """
 import glob
 import json
@@ -114,5 +114,7 @@ for q in data["questions"]:
     print(q["question"])
     for t, r in q["runs"].items():
         print(f"  T={t:>3} {len(r['steps']):>2} steps finished={r['finished']}: {r['answer'][:110]!r}")
+# A classic script (window.TRACES = ...), so index.html also works from file://.
 with open(sys.argv[1], 'w') as f:
-    json.dump(data, f, ensure_ascii=False)
+    f.write("// Real SmolLM2-135M-Instruct traces, written by scripts/record_traces.py. Do not edit.\n")
+    f.write("window.TRACES = " + json.dumps(data, ensure_ascii=False) + ";\n")

@@ -1,18 +1,1436 @@
 <!doctype html>
 <html lang="en">
-  <!-- body margin/height: the Astryx reset handles the rest -->
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Edulab theme fonts (edustyl: load with <link>, never @import) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" />
-    <title>How a chat writes its answer</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="A visual explainer of how a chat model writes its answer: chat template, tokens, chances, the pick and the stop – with real SmolLM2 traces or LFM3-1.7B running live in the browser.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg?v=202611091415">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=202611091415">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=202611091415">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=202611091415">
+<meta name="theme-color" content="#FFD500">
+<title>How a chat writes its answer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap">
+<style>
+  @keyframes boot-reveal { to { visibility: visible; } }
+  html:not(.app-ready) body { visibility: hidden; animation: boot-reveal 0s 4s forwards; }
+  @media print { html:not(.app-ready) body { visibility: visible; animation: none; } }
+</style>
+<noscript><style>html:not(.app-ready) body { visibility: visible; animation: none; }</style></noscript>
+<script src="https://cdn.jsdelivr.net/npm/lucide@1.57.0/dist/umd/lucide.min.js"
+  integrity="sha384-Qp5jsYqEgOGiWD8YMQ6yXIycASOePxr9mmbt+Ua0Wu1IScYxo0Pxf7o3Kx6NWJID"
+  crossorigin="anonymous" async></script>
+<style>
+/* ============================================================
+   edulab - Colors & Type foundation
+   Fonts (Outfit, IBM Plex Sans, Roboto Mono) load from Google Fonts
+   via the <link> tags in tokens/head.html - paste that into <head>.
+   No @import here: it chains requests and blocks rendering.
+   ============================================================ */
+
+:root {
+  /* ---- Brand fonts ---- */
+  --font-display: 'Outfit', 'IBM Plex Sans', system-ui, sans-serif;
+  --font-sans:    'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --font-mono:    'Roboto Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* ============================================================
+     RAW COLOR TOKENS
+     ============================================================ */
+
+  /* Paper - page background is white; the stone steps are bands / wells.
+     Warm neutral grey (no yellow cast) so yellow and the colour blocks stay the
+     loudest thing on the page. Stone v2 (2026-10-10) replaced the cream sand
+     (#FBF7E6 / #F5EDCB), which at 1.07:1 on white did not read as a surface. */
+  --paper:    #FFFFFF;   /* page background (white)                       */
+  --paper-2:  #F5F3F0;   /* stone band: alternating sections, card heads   */
+  --paper-3:  #EAE6E0;   /* deepest stone: wells, table heads, bar tracks  */
+  --surface:  #FFFFFF;   /* cards & sheets                                */
+
+  /* Ink - warm near-black text & lines */
+  --ink:      #1C1917;   /* primary text                                    */
+  --ink-2:    #44403C;   /* secondary text, 10.3:1 on white                 */
+  --ink-3:    #625B53;   /* muted / placeholder: >= 4.5:1 on every paper step */
+  --line:     #E0DBD3;   /* hairline: dividers, table rows, card heads      */
+  --line-2:   #C9C2B7;   /* stronger: card contours, section rules          */
+  --line-strong: #857C69;/* control boundaries (inputs, ghost buttons,
+                            answer options): >= 3:1 on paper steps (WCAG 1.4.11) */
+
+  /* ---- Brand: Yellow main · Blue + Green secondary · Red danger ----
+     Plain saturated colours. The base colour (--blue) is for large fills,
+     illustrations and large text (>= 24px, or 19px bold). "-soft" is the
+     solid fill for chips and panels that carry small text: it is the
+     AA shade (= "-600"), so its "-ink" (white; dark ink on yellow) reaches
+     4.5:1. A colour used AS text goes only on white and uses "-600".
+     Never colour-on-colour (no green text on green).
+     Gate: python3 scripts/check-contrast.py */
+
+  /* Yellow - primary (buttons, progress, values on dark panels) */
+  --yellow:      #FFD500;
+  --yellow-600:  #F0C800;  /* hover / press          */
+  --yellow-soft: #FFD500;  /* chip / panel fill      */
+  --yellow-ink:  #1C1917;  /* text on yellow         */
+
+  /* Blue - secondary (panels, chips, correct / selected state) */
+  --blue:      #1E8FC2;
+  --blue-600:  #177AA8;
+  --blue-soft: #177AA8;   /* = blue-600, white text 4.8:1 */
+  --blue-ink:  #FFFFFF;
+
+  /* Green - secondary support (chips, success) */
+  --green:      #00A651;
+  --green-600:  #078342;  /* hover / press, AA text shade */
+  --green-soft: #078342;  /* = green-600, white text 4.9:1 */
+  --green-ink:  #FFFFFF;
+
+  /* Red - danger / important / wrong (use sparingly) */
+  --red:      #E5322D;
+  --red-600:  #C92823;
+  --red-soft: #C92823;   /* = red-600, white text 5.5:1 */
+  --red-ink:  #FFFFFF;
+
+  /* Grape - 5th category tone (colour-coded groups), from the play palette */
+  --grape:      #7A5AC2;
+  --grape-soft: #7A5AC2;  /* white text 5.2:1 */
+  --grape-ink:  #FFFFFF;
+
+  /* Legacy role aliases - older edulab apps use these names */
+  --marigold: var(--yellow); --marigold-600: var(--yellow-600); --marigold-soft: var(--yellow-soft); --marigold-ink: var(--yellow-ink);
+  --teal:     var(--blue);   --teal-600:     var(--blue-600);   --teal-soft:     var(--blue-soft);   --teal-ink:     var(--blue-ink);
+  --sky:      var(--green);                                     --sky-soft:      var(--green-soft);  --sky-ink:      var(--green-ink);
+  --coral:    var(--red);    --coral-600:    var(--red-600);    --coral-soft:    var(--red-soft);    --coral-ink:    var(--red-ink);
+
+  /* Play palette - subject/category colours in the kids app */
+  --play-sun:    #FFD500;
+  --play-grass:  #00A651;
+  --play-berry:  #C6478B;
+  --play-grape:  #7A5AC2;
+  --play-sky:    #1E8FC2;
+  --play-coral:  #E5322D;
+
+  /* ---- Semantic ---- */
+  --success:      #00A651;  --success-soft: #078342;  --success-ink: #FFFFFF;
+  --warning:      #FFD500;  --warning-soft: #FFD500;  --warning-ink: #1C1917;
+  --danger:       #E5322D;  --danger-soft:  #C92823;  --danger-ink:  #FFFFFF;
+  --info:         #1E8FC2;  --info-soft:    #177AA8;  --info-ink:    #FFFFFF;
+
+  /* ---- Functional aliases ---- */
+  --bg:        var(--paper);
+  --fg:        var(--ink);
+  --fg-muted:  var(--ink-2);
+  --primary:   var(--yellow);
+  --on-primary:#1C1917;      /* dark text on yellow */
+  /* White gap + ink band: >= 3:1 on paper, sand, yellow and every chip fill.
+     Pair with `outline: 3px solid transparent` so forced-colours mode still shows focus. */
+  --focus-ring: 0 0 0 2px var(--paper), 0 0 0 5px var(--ink);
+  /* Range-slider track */
+  --track: color-mix(in srgb, var(--ink) 24%, transparent);
+
+  /* ============================================================
+     SPACING  (4pt base)
+     ============================================================ */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px;
+  --sp-12: 48px; --sp-16: 64px; --sp-20: 80px; --sp-24: 96px;
+
+  /* ---- Radii (friendly, generous) ---- */
+  /* Page gutter (user decision 2026-11-07): content ~70% of the viewport on wide screens
+     (15% margin each side from ~1280px), never squeezed below 900px, 16-72px on phones/tablets.
+     Every full-width band, header row, page head and footer pads its content with it. */
+  --gutter: max(clamp(16px, 4vw, 72px), min(15vw, calc((100vw - 900px) / 2)));
+  --r-xs: 6px; --r-sm: 10px; --r-md: 14px; --r-lg: 20px; --r-xl: 28px; --r-pill: 999px;
+
+  /* ---- Elevation - warm, low, soft ---- */
+  --shadow-sm: 0 1px 2px rgba(33,30,26,.10), 0 2px 6px rgba(33,30,26,.06);
+  --shadow-md: 0 6px 18px rgba(33,30,26,.12), 0 1px 3px rgba(33,30,26,.08);
+  --shadow-lg: 0 16px 40px rgba(33,30,26,.12), 0 3px 8px rgba(33,30,26,.06);
+  --shadow-primary:  0 8px 22px color-mix(in srgb, var(--yellow) 30%, transparent);
+  --shadow-marigold: var(--shadow-primary);   /* legacy alias */
+
+  /* ============================================================
+     TYPE SCALE (semantic sizes)
+     ============================================================ */
+  --display-font:  clamp(48px, 6vw, 72px);
+  --h1: 44px; --h2: 33px; --h3: 25px; --h4: 19px;
+  --body-lg: 18px; --body: 16px; --body-sm: 14px;
+  --caption: 13px; --overline: 12px;
+}
+
+/* ============================================================
+   SEMANTIC ELEMENT STYLES
+   Apply via element selectors or .edu-prose wrapper.
+   Element defaults are wrapped in :where(.edu) (zero specificity) so any
+   single class wins: <p class="edu-overline">, <p class="edu-small">,
+   <h1 class="app-title"> keep their own font/size instead of the element default.
+   ============================================================ */
+
+.edu-display, :where(.edu) h1.display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--display-font);
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+:where(.edu) h1, .edu-h1 {
+  font-family: var(--font-display);
+  font-weight: 700; font-size: var(--h1);
+  line-height: 1.06; letter-spacing: -0.02em; color: var(--ink);
+}
+:where(.edu) h2, .edu-h2 {
+  font-family: var(--font-display);
+  font-weight: 700; font-size: var(--h2);
+  line-height: 1.12; letter-spacing: -0.015em; color: var(--ink);
+}
+:where(.edu) h3, .edu-h3 {
+  font-family: var(--font-display);
+  font-weight: 700; font-size: var(--h3);
+  line-height: 1.2; letter-spacing: -0.01em; color: var(--ink);
+}
+:where(.edu) h4, .edu-h4 {
+  font-family: var(--font-sans);
+  font-weight: 700; font-size: var(--h4);
+  line-height: 1.3; color: var(--ink);
+}
+:where(.edu) p, .edu-p, .edu-body {
+  font-family: var(--font-sans);
+  font-weight: 400; font-size: var(--body);
+  line-height: 1.6; color: var(--ink-2);
+}
+.edu-body-lg { font-family: var(--font-sans); font-size: var(--body-lg); line-height: 1.6; color: var(--ink-2); }
+.edu-small  { font-family: var(--font-sans); font-size: var(--body-sm); line-height: 1.5; color: var(--ink-2); }
+.edu-caption{ font-family: var(--font-sans); font-size: var(--caption); line-height: 1.45; color: var(--ink-3); }
+
+/* Overline - mono, tracked; functional labels only (never above page/section titles) */
+.edu-overline {
+  font-family: var(--font-mono);
+  font-weight: 500; font-size: var(--overline);
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink);
+}
+:where(.edu) code, .edu-mono {
+  font-family: var(--font-mono);
+  font-size: 0.92em; color: var(--ink);
+  background: var(--paper-3); padding: 0.12em 0.4em; border-radius: var(--r-xs);
+}
+
+/* Solid colour blocks (callouts, stat cards, chips): set background: var(--X-soft) and
+   color: var(--X-ink) on the block, add .edu-block, and every heading/paragraph inside
+   inherits that text colour instead of the default ink. */
+.edu-block, .edu-block h1, .edu-block h2, .edu-block h3, .edu-block h4, .edu-block p,
+.edu-block li, .edu-block small { color: inherit; }
+
+body.edu { background: var(--paper); color: var(--ink); font-family: var(--font-sans); }
+
+/* ─── App ─── */
+:root {
+  --tok-special: var(--grape-soft);
+  --bar-track: var(--paper-3);
+  --chat-bubble-user: var(--paper-3);
+  --chat-bubble-bot: var(--paper-2);
+}
+/* The app takes 80% of the viewport width on every desktop size
+   (10% margin each side); phones keep the token's small gutter. */
+@media (min-width: 901px) {
+  :root { --gutter: 10vw; }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; height: 100%; }
+body.edu { display: flex; flex-direction: column; height: 100dvh; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+:focus-visible { outline: 3px solid transparent; outline-offset: 2px; box-shadow: var(--focus-ring); }
+button { font: inherit; color: inherit; }
+b, strong { color: var(--ink); font-weight: 600; }
+
+/* Top menu */
+.edu-header { position: sticky; top: 0; z-index: 50; width: 100%; background: var(--paper); border-bottom: 1px solid var(--line-2); flex: none; }
+.edu-header-inner { padding: 8px var(--gutter); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.edu-logo { width: 64px; height: 64px; display: block; margin-right: -6px; }
+.edu-wordmark { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: -.02em; color: var(--ink); }
+.grow { flex: 1; }
+.pickers { display: flex; gap: 10px; flex-wrap: wrap; }
+.picker { display: flex; flex-direction: column; gap: 3px; }
+.picker span { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-2); }
+.picker select { font: inherit; font-size: 15px; padding: 7px 34px 7px 12px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--ink); min-width: 0; max-width: 340px; }
+
+/* Page */
+.app { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.page-head { padding: 18px var(--gutter) 14px; flex: none; }
+.app-title { font-family: var(--font-display); font-weight: 800; font-size: clamp(1.7rem, 2.6vw, 2.3rem); letter-spacing: -.025em; line-height: 1.05; color: var(--ink); margin: 0 0 6px; }
+.edu-lead { font-size: 1.05rem; line-height: 1.5; color: var(--ink-2); margin: 0; }
+.panels { flex: 1; min-height: 0; display: flex; gap: 18px; padding: 0 var(--gutter) 18px; }
+.panel-chat { flex: 34 1 0; min-width: 0; }
+.panel-stage { flex: 66 1 0; min-width: 0; }
+
+/* Card anatomy */
+.card { background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); overflow: hidden; display: flex; flex-direction: column; height: 100%; }
+.card-head { padding: 12px 20px; background: var(--paper-2); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex: none; }
+.card-head h2 { margin: 0; font-family: var(--font-display); font-size: 21px; font-weight: 700; color: var(--ink); }
+.card-head .sub { margin: 0; font-size: 14px; color: var(--ink-2); }
+.head-meta { font-family: var(--font-mono); font-size: 13px; color: var(--ink-2); }
+.card-body { padding: 18px 20px; flex: 1; min-height: 0; }
+.scroll { overflow-y: auto; position: relative; }
+.card-foot { padding: 12px 20px; border-top: 1px dashed var(--line-2); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex: none; }
+.foot-note { font-size: 14px; color: var(--ink-2); margin: 0; line-height: 1.45; }
+
+/* Inner cards (sub-panels inside the stage) */
+.box { border: 1px solid var(--line-2); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+.box-head { padding: 9px 16px; background: var(--paper-2); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.box-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.label { font-family: var(--font-mono); font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: .1em; color: var(--ink); }
+
+/* Text */
+.stack { display: flex; flex-direction: column; gap: 16px; }
+.row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.txt { margin: 0; font-size: 18px; line-height: 1.6; color: var(--ink-2); }
+.note { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ink-3); }
+.big { font-size: 22px; font-weight: 500; color: var(--ink); line-height: 1.45; }
+.keep-lines { white-space: pre-line; }
+
+/* Stepper: each step is a full box, the active one solid yellow */
+/* Equal cards: columns share the width exactly (minmax 0) and every card fills its row height */
+.stepper { list-style: none; margin: 0; padding: 12px 20px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; border-bottom: 1px solid var(--line); flex: none; }
+.stepper li { display: flex; min-width: 0; }
+.step { width: 100%; height: 100%; text-align: left; border: 1px solid var(--line-2); background: var(--surface); border-radius: var(--r-sm); padding: 7px 10px; cursor: pointer; display: flex; gap: 8px; align-items: flex-start; }
+.step:hover { background: var(--paper-2); }
+.step-n { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-mono); font-size: 12px; background: var(--paper-3); color: var(--ink); }
+.step-t { display: flex; flex-direction: column; min-width: 0; }
+.step-t b { font-size: 15px; }
+.step-t small { font-size: 12.5px; color: var(--ink-2); line-height: 1.3; }
+.step.done { background: var(--paper-2); border-color: var(--line); }
+.step.done .step-n { background: var(--ink); color: var(--yellow); }
+.step.active { background: var(--yellow); border-color: var(--yellow); }
+.step.active .step-n { background: var(--ink); color: var(--yellow); }
+.step.active small { color: var(--yellow-ink); }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line-strong); background: transparent; color: var(--ink); border-radius: var(--r-pill); padding: 8px 16px; font-family: var(--font-display); font-weight: 600; font-size: 15px; cursor: pointer; transition: background-color .15s; }
+.btn:hover { background: var(--paper-2); }
+.btn-primary { background: var(--yellow); border-color: var(--yellow); color: var(--on-primary); }
+.btn-primary:hover { background: var(--yellow-600); border-color: var(--yellow-600); }
+.btn-text { border-color: transparent; }
+.btn-sm { padding: 5px 12px; font-size: 14px; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+.btn .ic { width: 16px; height: 16px; }
+kbd { font-family: var(--font-mono); font-size: 12px; padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: var(--r-xs); background: var(--surface); color: var(--ink); }
+.kbd-hint { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--ink-2); }
+
+/* Segmented control and switch */
+.seg { display: inline-flex; gap: 2px; padding: 3px; background: var(--paper-3); border-radius: var(--r-pill); }
+.seg button { border: none; background: transparent; padding: 4px 12px; border-radius: var(--r-pill); font-weight: 600; font-size: 15px; color: var(--ink-2); cursor: pointer; font-family: var(--font-mono); }
+.seg button[aria-checked="true"] { background: var(--yellow); color: var(--yellow-ink); }
+.switch { display: inline-flex; align-items: center; gap: 8px; border: none; background: none; cursor: pointer; font-size: 16px; color: var(--ink); padding: 2px; }
+.switch-track { width: 38px; height: 22px; border-radius: var(--r-pill); background: var(--line-strong); position: relative; transition: background-color .15s; }
+.switch-track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--paper); transition: transform .15s; }
+.switch[aria-checked="true"] .switch-track { background: var(--ink); }
+.switch[aria-checked="true"] .switch-track::after { transform: translateX(16px); background: var(--yellow); }
+
+/* Token chips */
+.tok { display: inline-block; font-family: var(--font-mono); font-size: 14px; line-height: 1.3; padding: 2px 8px; border-radius: var(--r-xs); white-space: pre; border: 1px solid transparent; }
+.tok-sm { font-size: 12.5px; padding: 1px 6px; }
+.tok-lg { font-size: 17px; padding: 3px 9px; }
+.tok-special { background: var(--grape-soft); color: var(--grape-ink); }
+.tok-role { background: var(--surface); border-color: var(--line-strong); color: var(--ink); }
+.tok-system { background: var(--paper-3); color: var(--ink); }
+.tok-user { background: var(--blue-soft); color: var(--blue-ink); }
+.tok-answer { background: var(--green-soft); color: var(--green-ink); }
+.tok-next { background: var(--yellow); color: var(--yellow-ink); }
+.tok-plain { background: var(--paper-2); border-color: var(--line-2); color: var(--ink); }
+.tokens { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; font-size: 14px; color: var(--ink-2); }
+
+/* Template turns */
+.turns { display: flex; flex-direction: column; gap: 12px; }
+.turn { border: 1px solid var(--line-2); border-radius: var(--r-md); overflow: hidden; }
+.turn-head { padding: 8px 14px; background: var(--paper-2); border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.turn-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.turn-note { font-size: 14px; color: var(--ink-2); margin-left: 4px; }
+.role-chip { font-family: var(--font-mono); font-size: 13px; padding: 2px 9px; border-radius: var(--r-pill); }
+.role-system { background: var(--ink); color: var(--paper); }
+.role-user { background: var(--blue-soft); color: var(--blue-ink); }
+.role-assistant { background: var(--green-soft); color: var(--green-ink); }
+
+/* Probability bars */
+.bars { display: flex; flex-direction: column; gap: 9px; }
+.bar-row { display: grid; grid-template-columns: 150px 1fr 64px; gap: 12px; align-items: center; }
+.bar-label { overflow: hidden; }
+.bar { height: 14px; border-radius: var(--r-pill); background: var(--bar-track); overflow: hidden; }
+.bar-fill { height: 100%; border-radius: var(--r-pill); background: var(--yellow); min-width: 2px; }
+.bar-fill.picked { background: var(--green-soft); }
+.bar-fill.muted { background: var(--line-strong); }
+.bar-fill.rest { background: var(--line-2); }
+.bar-val { font-family: var(--font-mono); font-size: 15px; color: var(--ink); text-align: right; }
+.bar-others { font-size: 14px; color: var(--ink-2); }
+
+/* Stop stage */
+.runs { display: flex; flex-direction: column; gap: 12px; }
+.run { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: start; }
+.run-text { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-3); }
+.run.current .run-text { color: var(--ink); }
+.run .btn { justify-content: center; font-family: var(--font-mono); }
+
+/* Callouts: full solid blocks */
+.callout { border-radius: var(--r-md); padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; }
+.callout p, .callout h3 { margin: 0; }
+.callout h3 { font-family: var(--font-display); font-size: 20px; }
+.callout p { font-size: 16px; line-height: 1.55; }
+.callout-blue { background: var(--blue-soft); color: var(--blue-ink); }
+.callout-blue b { color: inherit; }
+.callout-yellow { background: var(--yellow-soft); color: var(--yellow-ink); }
+.callout-red { background: var(--red-soft); color: var(--red-ink); }
+.callout-red b, .callout-yellow b { color: inherit; }
+
+/* Fields and progress */
+.field { display: flex; flex-direction: column; gap: 8px; }
+.input { width: 100%; padding: 10px 14px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); font: inherit; font-size: 17px; background: var(--surface); color: var(--ink); resize: vertical; }
+.progress { display: flex; flex-direction: column; gap: 6px; }
+.progress-label { font-size: 15px; color: var(--ink); font-weight: 500; }
+.spinner { width: 18px; height: 18px; border-radius: 50%; border: 3px solid var(--paper-3); border-top-color: var(--ink); animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Chat */
+.chat { display: flex; flex-direction: column; gap: 14px; }
+.msg { display: flex; gap: 10px; align-items: flex-start; }
+.msg-user { justify-content: flex-end; }
+.bubble { max-width: 85%; padding: 10px 15px; border-radius: 18px; font-size: 17px; line-height: 1.5; color: var(--ink); }
+.msg-user .bubble { background: var(--chat-bubble-user); border-bottom-right-radius: 6px; }
+.msg-bot .bubble { background: var(--chat-bubble-bot); border: 1px solid var(--line); border-top-left-radius: 6px; display: flex; flex-direction: column; gap: 8px; }
+.avatar { flex: none; width: 32px; height: 32px; border-radius: 50%; background: var(--ink); color: var(--yellow); display: grid; place-items: center; font-family: var(--font-display); font-weight: 700; font-size: 15px; }
+.sys { text-align: center; font-size: 14px; color: var(--ink-2); }
+.thinking { display: flex; flex-direction: column; gap: 2px; padding-bottom: 8px; border-bottom: 1px dashed var(--line-2); }
+.thinking b { font-size: 13.5px; color: var(--ink-2); }
+.thinking span { font-size: 14px; color: var(--ink-3); line-height: 1.45; }
+.caret { opacity: .6; }
+
+/* Narrow stage panel (laptops at the ~70% content width): compact steps and buttons */
+.panel-stage .card { container-type: inline-size; }
+@container (max-width: 760px) {
+  .stepper { padding: 8px 14px; gap: 6px; }
+  .step { padding: 5px 8px; align-items: center; }
+  .step-t small { display: none; }
+  .step-t b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-foot { padding: 10px 14px; gap: 6px; }
+  .btn { padding: 6px 12px; font-size: 14px; }
+  .kbd-hint { display: none; }
+  .card-body { padding: 14px 16px; }
+  .txt { font-size: 16px; line-height: 1.45; }
+  .stack { gap: 10px; }
+  .box-body { padding: 10px 14px; gap: 8px; }
+  .bars { gap: 7px; }
+  .bar-row { grid-template-columns: 120px 1fr 56px; gap: 10px; }
+}
+/* Short screens: smaller page head so the panels keep their height */
+@media (max-height: 820px) and (min-width: 901px) {
+  .edu-logo { width: 48px; height: 48px; }
+  .edu-header-inner { padding-block: 4px; }
+  .page-head { padding: 10px var(--gutter) 10px; }
+  .app-title { font-size: 1.6rem; margin: 0; }
+  .edu-lead { display: none; }
+  .panels { padding-bottom: 12px; }
+}
+
+/* Phones and narrow tablets: stack the panels and let the page scroll */
+@media (max-width: 900px) {
+  body.edu { height: auto; min-height: 100dvh; }
+  .edu-header { position: static; } /* the tall picker bar would eat a phone screen */
+  .edu-logo { width: 48px; height: 48px; }
+  .pickers { width: 100%; }
+  .picker { flex: 1 1 100%; }
+  .picker select { max-width: none; width: 100%; }
+  .panels { flex-direction: column; }
+  .panel-chat { flex: none; height: 380px; }
+  .panel-stage { flex: none; }
+  .panel-stage .card { height: auto; }
+  .panel-stage .scroll { overflow: visible; }
+  .stepper { grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 10px 12px; gap: 4px; }
+  .step { flex-direction: column; align-items: center; padding: 6px 4px; text-align: center; }
+  .step-t small { display: none; }
+  .step-t b { font-size: 12px; }
+  .bar-row { grid-template-columns: 96px 1fr 56px; gap: 8px; }
+  .kbd-hint { display: none; }
+  .txt { font-size: 17px; }
+}
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2s; } }
+</style>
+</head>
+<body class="edu">
+<header class="edu-header"><div class="edu-header-inner">
+  <img class="edu-logo" alt="edulab" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPoAAAD6CAYAAACI7Fo9AAAcIElEQVR4Xu1dTXIcR3bOLACUFzMkvRVHYpOSIxyhhaATCDoBwaXDC4InIHQCgScgdAKBO+8EHsCh1gkGs5sIi2CDIrg1OB5HjAmyyi+ru4Hq6qrKn8qsyp8PEfYw1Pnz3vfeVy/z5R9n+AMCQCB6BHj0GkJBIAAEGIgOJwACCSAAoidgZKgIBEB0+AAQSAABED0BI0NFIACiwweAQAIIgOgBG7koitJ+nHP65/zfyz/x30xUq7ezbN+kLdTxBwEQ3R9bNEoiiGdKWteqVT80rvtC+/0QANH74We9dsjkqY4GfP04WTdYIA2C6B4YyueobQOe2PWzgZHrNkB01wg3tJ+y44c8YhnBVax1CaJbg7K5ITh2O8Apf/Acu91a8yC6I8ThxHrA4oOoh5duaRBdFzGUd44APpL2IQbRe2KKSNQTQEl1kN4OviC6IY5wQEPgDKvhg2oI3KIaiK6JHwiuCZjl4sDfDFAQXRE3OJgiUAMWg03UwQbRMUdU9xaUDBYBED1Y00FwIKCOAIhewwrDQXXnQclwEADRw7EVJNVEAB/ta8CSJzqcQZM9gRWHfecGS5rocILAWNtD3NRtnSTRUzd6D76gaqAIJEd0kDxQT7Uodoo+kAzRUzSuRW6gqcARSILoIHngXupQ/FR8I2qip2JEhzxIoukU/CRaoqdgvCRYCCWtIBAd0XGc0YpfJNtIrAEiOqIn66FQ3BoCMZI9GqLHaBxrnouGtBGIzZ+iIbq2JVEBCCggEAvhgyd6LIZQ8DkUAQLGCARLdBDc2OaoaIBA6P4WLNENbIUqQKAXAiGTHUTvZXpUTg2BUMkOoqfmqdC3NwIhkj0YoocIbm+PQgPeIhCaPwZB9NBA9dY7IViyCHhPdJA8Wd+E4hYR8J7oFnVFU0DACQIhBCNviR4CeE68Bo0GiYDv/uol0X0HLUhPhNDOEfDZb70kunOLoAMg4AgBX8kOojsyOJpNFwEfyQ6ip+uP0NwhAr6RHUR3aGw0DQR8QcALovv29fPFOJADCNhCYHSig+S2TIl2fETAF/8eneg+GgcyAYHYEADRY7Mo9AECDQiA6HALIJAAAqMQ3Zd5SwL2hYpAoERgFKIDeyAABIZFAEQfFm/0BgTYGCPaQYk+hoLwKyAABDB0hw8AgVEQGDroDRrRR0EUnQIBTxEYkuyDEH1IhTy1KcQCAqMiMAjRR9UQnQMBjxEYKgg6J/pQinhsS4gGBDoRGIIjzokOGwMBIDA+AiD6+DaABEDA+dq6M6IPMRyBfwABIKCGgDOiq3WPUkAACAyBgBOiI5oPYTr0AQTUEXBCdPXuURIIAIEhELBOdETzIcyGPoCAHgLWia7XPUoDAca+nHz2IM/znYKzbcJjm1LQtxnnU4EN5/z4Jtt8fjKbXaSClYtgaZXoLgRMxbgp6vnF5M6jvCgOWMEmMv0540enr88fy8rF8rttLlkjum3BYjEY9FhHYHsyuf234v1PRcF2dfDhGf/+dHZ+qFMn1LK2+QSih+oJgcotSP6uuPyFhudimK71x7Ps6enszYFWJRQuEbBGdOAJBFQQuHf3jiD5TmNZzn+lYfyMIveMItqTcq5e+dvIsu9+m72ZqvQTQxmbUd0K0W0KFIOBoEMzAvcnfzoo8vyHhl9ffJLd2P/rbDYTv305+dPOxzz/ZaUcfQRenZ03fyAAuBQBK0SX9oICySOwGLK/qkfppnl3U9RPLZovHcZWEO1NdFuCJM+EyACgqPxtVaU8L3YLVuxX/xtl0n+kTPrKf0M0d+MIvYnuRiy0GhIC/zK5s/0xLx4UnO+qJtloffzdTb41qa+PI5q7sXwvoiOauzFKKK3qrIPXdUI0V7eyDZ71Irq6qCgZEwJfTD7bzYuPz1Q2urTp3TTnRjR35yUgujtso2z5/ud3ntXn2iaK1okuhv8f8uLPtUz7xSd865tlNt6kn1jq9I3qIHosnuBYD6WNLpyd8YIfs4zNMsZPliLlrNgu8uJZVcQ60RuTcKIC5xc0nz+gjTI/OlYx6uZB9KjNa0c5Ocn580+yrYOmyNs2j28Zup9QMu/rRqnpkAtF98cpR/c+UR1Et8OFqFuhufOfW7LpKxtdqiDIEnWbGf/mv2bnV1Ff1C33wOeXBzQ1eNJC9qSj++BE79Nh1IyIULm23WxNWXOhvlKijvO/0C631r3u5TC+yI8o2Xe3CVLsedd3NER0fcySqdGYICPts4w/fjk7P6oCsRje/9y6j/2qMH9+K9val50vl0X3LNt4+HL2+3EyxlgoahpkQfTUPEVD3+YhO3/+6vX5XgPJJSfS2ufxXSK1RndK0m1y9l19+K+hXpBFByO6aUdBopqw0OUQPP/48woEDQdL+iTqVOFd9DFdS9RxfnKLb30nGx2o9hNzOUT0mK3bQ7d7n38qhsUPqk00Zcrv3/3058YLJOijQFnyPVtZ8vllFZfi+Oqtqkycs+PTs7cPe6gaXFWTYAuiB2dm9wL/62Qy+b/8/ataTy9evX67ciNM29q3q5tg2nIGSM7JfQJEl2OUXIn7kzv79Q0uTcmvpi2rTYk6mwDSst0enYT7qd5mqsk5VWy1iG4yZFAVBOX8QYC2uR5W17LFSbPTs/OV214ao/5Al0Pc+/zOEWPFo1r+IMnknKrXaBFdtVGUCxsBitQi8XV9nryBwE2RdcioSjKu76JLKDmnG3SVia7bcNiunrb0lIgrVhJeDZcyNkVVmsMr+1NfhFNPzunycTDD9DUs6g+HwDrR169ZVon6JhJ/9dVXf/jH/178+0rdDf6fL1+++a3eHpJz6giD6OpYJVGyKZPefADlU7r/rfrwwvpGGhPA7t+//3nx4R9n1bpZxv7t5eztfzS1h+ScGsoguhpOyZRSJrrC8N4ENF2iiz6QnJMjDaLLMUqqRFOEvJXd+Ofq7rOmjLutZTUTopdkTzA5pzNPVyK6ToNJsSJCZZtOq9WTbKpR3wQeU6KnnpyTYQ2iyxCi34UT/Z19+Fq8+Elv22wXjNOacjG5mqNyNqOrUGacFRf0306yLJvSiyK/KjTtXZE60ZvW0JuiPj3AcM/Wdlci+8o219PT03cqQCE5146SEtFVQI6tjCD3/7DLBzSa2dV9DHCJhdiHLZ79pSOdz0PBRyWbrhL1x9IXyblm5EH0Gi7zc9Dvn9Ad5fv1V0WMnVfce1YUhzezGz/6ftJKhehryS+6K+7V2duJMT6WKyI5tw4oiF7BZH79ETu0RvA63kT4jLN9nyP8vbury2ZNN8mofAwsc1e7uVSSc6r5MynRVRvStoRHFdRvRyGh6Rok+v8XQnwalk/F/xJGOwt1brdebljRVwzpb/Ibj32M7kq74mofA0Ji7TKKsc1b2jR//9/r39r0jrWWviozSOxELxM4BRO3o6wc2qjh8oKWj4632NZUlnASS0/v2eUunf4S5F85z73Spqc3pCjtinO0hi7zRdnvX04+e0AJ092CEqZdT0OleKxVSnQZuCH/XiZuCkYvjrSRXO1+szYM5uvNlwdrJ62WFYjsG5w/9OXNb5VlM5dr6Ca+JGSmY6uP6LTdnk79IQ/g6MjlqmyyRG/Lzi6Abr3G2MQQC3IctkV4W5tNTGSr1lEhukqZvnKo1J/fJUePQhRF622yne3QRzalV2CSJHoXyV2Sbqx+VYgjyqjsinO9hi6TtfxoFpc/yW+blbUk5q3rzzbLa4VZIjmit5FNbAzZ4GzH9a2i5VCzKI7rd5+F6T5zqYc6nkrr90+KPBcjo+4/Oj/PaeMSzcWnYhPTJtuc/RMlUNfunBvoogyZuEP8nhTRxyb50qDle+IFm0ZB9gHW0JVWRYi0tHR59Ee2ddy2mhHCsqAJ6VUS5skQ3SbJ55n1Dw9YTo8H8vlRTYogM5bxkxts84UsMy/KR0N2zai4eJjhmcCNEpFPZYlI6XXS1D+1cyBrR2AeK9FVPg5JEH0xrxPvh60soekO10uC55c/SDO8tL6u4sRRkF2T6PVHIbpyIp1LnzSS2ODZngrBl0QA0Vs+CSpDApWvydhl2q4l1km8yZfi1rWkr+jB6eu3T7v0X+yp36WDMuXIYPlXbsKp3tsmRg10pdPYWBZFvrfyJpou0Wtr8EKfjieeWl5/MVv2BNEjJ3oZiYvLk7U5seKmFclSXCf3KLN7dPr6/LEuQX09ONKXLPUNOUtcqmTvGq7rfJzrmPeVXdeGPpXvHLrHEtEF4K1klZBdSnKKaKJ9AnK7LblmQvbUiF6N7HTd9E9N06M+JBftg+g+fXocyqJL9q4EHu1XF4dTjqriLjZxiEMxX9fV0CV7ikSffzD5kQuSg+gOieVj06pk7yj3F3rYb6dtCWd+mOKS1nprDwwsnFh1GJ8q0Zt8xtbe9Jgjumz0nUTWve48MrLnNAxvevZHnFzrInm1n8Yz0RpkB9EXaGom+7qCS8xElwXVJIkum7M3HnLRIPkS9Dayb2b8G9kOvFSILrah0pq6WGFYn+7QbsWbfGti6zgviC77HET6uzTRttTbgORdZFcZiiZDdFoyvMk2D98Vl+vvnxOIfRNwSzss1uTFHvnrQzAWRwtjUwRDd4kFpGTvQfJrssufOKqLmRLRT2dvDhZLatbIXm5GYvxbVuQ7tEdBjBjW7xsA0cf+Pg3bv2niTVVKlVtbUie60L8P2ZWIvW6wtTffVW3qWzlEdEWLrJHdQiS3HdHrDykoqma1mMlHazVJ2T26USW7IbFXsEjp8olkk3FN3r9wnl1aGru4ybaOrCWBDK5e+mLy2W6ef/y5KifP1h87tMpi6TSnv0wqH4oustPKx1QEf9MLPMX5Bop+UyL50cvZ78dD4jdmXyD6AOirOHddjMbLDRW37LpQqe2Aie7DDapYdJJdQ8ElsekjOd1gbCpb7dBo2quiGLp7YA5V566L2rEWfyguqxxKNdpTIC5cpMMs9YSW/u2vOliYkD0VYtdtD6IPxYaOfnScu9pM23tiHqgkrrp+d4NvbaucvdeZozeObFqW3kTZVIkNovvAgpoMpkQXzfh6Zt00kWWCxSKyH4tjuyC2mYNjjm6Gm1YtE+eudjCfHxfk6OyuVscOCute1rE+HdHfU+BAjeiaxNDdA5P2JbpQoRzGsw/7axc/DKUf3ejCeXYkdrH1WY2wgcVQKsfUDyL6ANa07dwiws+fbh7mT9ykaitbbRuLYRAIvxcQfQAbwrmvQQYWAzhcQxfJ3DAzDrzzXuHcIPqY/if6RkQfwAIgOog+gJt1doGIPoAFQHQQfQA3Myf62MLF0j+IDqKP7csYug9gARAdRB/AzRDRxwYZRAfRXfqgbLMMknEu0a+0PRbR6frpb+nq5EmRFxMhTsHpppXFX/lWHCvovbjsImPshF4cPdPdt24C31hYmMgaSh0Q3RNLDeXc5b74nD1aXLZ4fTeaKg6czXjB6ax2dvzb7PcXqtV0yg2FhY5MKZSVztFVvhYpANVHR5fOPX+d9P2T+THS+cuuVv7o7DtF/eMb2dZTm5HeJRZW9I60ESnRI9V7ULVcOPfi+eEfms+JW1ZP8XVYlV5dYKHSb+plQPQBPMC2c9MNsU9opHWgdZ0S3YFHql6sqFt7rVUGhXgu6Wa29T0OtciQ8u93EH0Am9gi+uKd959X7iZvkp9ITcPuKd0fP91iGyddQ28xMvg7+7BNr9PsND3VvNY8Dekznj02vW/NFhYDmC2ILlSn1iC6BXMKAn5kl7fbTnjZcG7Z++zinDjN0Y82MnbU56TZ8r32vGD7Ta+nLOGi6H5I0f2pbnRXxUKGqQWzRdEEiD6QGVeuiaa5LL3N9rDu/KrO3Sby/c8//aFg7KA5ePN34mXXP7KtY13SySBavA4rpgjfNpbl/IT0/U6nXxUs6NnkZ7QsuF/22YKpTHb8voqAUkRX/WqkBm7jww8Nzq/i3O0kb34rvOQAvVtGUfVAh2gmNhJ6FgU7bHz/XZPsMiwa30bX7MNEx9jrgOiGFu58yonWozc5f7gcQsucW5fkYpiecb772+zN1FB87WrVe9sa5u3Kkb0Li0aSX80V9EcP2kpGXEGJ6BHrb6Sa9L22+ZDzYoPILshoQvRWp7f4goyJ8iTXIQ2rn5iSvQmLxSOLvygkGZU/KCa6hVZHZ6QNomtaV4nklTbFa6D1t9Zlr6m2Rzb+/Fa2te96qC6DpOOtOikR60Snvl7QHORr5c0+GMZfmccJ0XUalTlKqL93PcZICbEjctaDxnlsTeEuoneR/NXr8z1fsDMlewPRW1Tiz+c/FI9MRw++YOWDHIjoilZQeXFV9Q72NqKHQvIlZCZkVyF69Y25ttdqaGokHT0omjaJYiC6gpmbHjwsqzXMl1WeEWoiemgkNyV7F9FFkpGulN6rb8ZpfZqKs+PTs7cPFUyYfBEQXcEFyDnFO2cPVopSso3WkO81zZcXDyQerdVZNkDRaJOzx8usfKgk1yH71d785fp4HXe6N55WKnY7Nh2t24DaePX6bZI+rDuVThIkBW6vFKG95QdFnv+w7pvde7/vT+7s01nwZ239id1l9NttymLvrZfRf8BQVy+b5buG8Rlnh7TT7rBjb/4Levt9ry3J2N42O3t19nZiU49Y29Iiuu5XJBbQJO91d84VF88NU6Ku+Fodj7BILo3sLYq3DdWrxVd2yVV+6Ps0lLot/CtpwkMtovun8rAStSeGVjfINEnVNioIPZLX5VdefuT810/41l7bgZvFUF9shV0f7UiG+cN6xfC9gegDYN6RBb7aINMmxmLvuBjCtkf3+YUP4nDK8z6HUwaAYqWLxdtwj+htODoM034BRnn4hrOD09m5mLY0/i1GUM0baEbeMDQ0rk39gegDWaErOot59+nr8++7RJmfRBPnySWvo1LSTsxv6cDKi7E3yXR9vGhD0KPmPMNqLbHaIHuksVzhKPKfGufzILmxh2Pobghd91731ax6UxfL11HJoemF1OJWpxiLa514xqY+kF5cOknk3i14sau2o40//4QO38jOxf8tv2weqpfghJm3MHSv1mom0bxEz0QQ085M+vK5jhiKU2Q+biMqRbD909mbH7t00CL8siGK9Jz6pUscp7SX/lfXGImz4e/ZhwesyOlyCrar3h9/vpHxI9nhm/mURkTx5iG/bMuwujzplgTRe9q+81RX+SnlU0o6PZZdsHh94YPCkL4usyC+uLq5YCdZtkH/zs9M5veC0B/Yh7t5nu+Q4BO6j25CIw76t/rf8gIMulTyUEVniuJ01n5x9rzWzRin9NQ1DaukEdHDUnEYaWVZdZ0bWRY78fZI8tVNOqaq0IeAqq7eF7dsS5PIrSKI66tov/9NtnWkkk+gqc+jPmvrplCEXK/PSBpEt2j5+Zp5cdyaZCvn2gUl694+Ven2KsrTfNga6VU6Vi2zIPcNut1GFr2XTcqG6eUgKOPfd2XlVcVDuWsEjIne5+sSswHm218vaemo4dTVUnG6mIIujjh4OTtfnNCSI3JNerbDOA2nZRl7eZPaJcRQmuxOl07yqQ65RUeLjUPPOqcC9OGgrcF7JtMObWUCq9CXb8ZEDwynwcVVWzOnl1F4dkhLTs9VhrtVJebE/7hDW3N3aC69TYbclmbvdVGgTS30QZlllO0XzzaZEPDLyWcPKNEmLprcaeteZW1dV3SUX0UARHfsEZ33rV1F+PkmGUpg/ag6BG4TW0TOgvHb4vrmZZny7TWRWGv4I5JNrwcaZVLv4g9s80T3w7P+Ebp8sNgr0Nhvpc9B7r1zbGbvmwfRBzDRYjvnQeMVTLX+KaF1TOQ79mG9XBcaEb0pY0/r67QEVxS3O+vTaIGG6fsmowRduUIv33fYLvQH0Qf0gvIBhvzyoHP+XpEnBNJrkbv0OP4r3aV3IFtbH9AsSXTVm+g2vjZJIF1RcrEBhR5FVNgVdz28n1LGXrx0Osgmma6pwUfGv2V5sa0Uua8aUts8k5ovyPS1xa/eRJcJit/bEVjuiqODIOIl1LtaWNHcmub1tEEmm9II4cLFDrnFfP9WuYGGEn4096dsv2RIvqaEfPurlt6JFQbRIzP4fJNMvkvD9V3j7Dmt0xMstD2WzYj89H/zP7FbTnwMmiCb74K7GjbcFhl8Kks74tpPoEmhp+E5HcY5cvF6jLRvFGhEABHdQ8dYHJjxc5NMG14Gm2c8hD5akawR3dYQI1qkDRRb3SRDkVbrlhqDDjWq9Nk8o9ENilpCwBrRLcmDZjoQqG2SEfNljeupekJLt7qwgvICGTvZYGyKZbGeeA5c3SrREdUHth51t7JBJi+qc2y95B61VUZpmuOL3XC0zXVGB3HKDTRYChverrZ7tEp028KhPXsILD8I1Rb77oCzJx1aqiLgImBaJ7oLIeEGQAAI9EPAOtH7iYPaQCBtBFwFSidEdyVs2i4A7YGAOQJOiG4uDmoCgXQRcBkgnRHdpdDpugI0jxUB13xxRnRhENfCx2p06AUEbCPglOi2hUV7QCBGBIYIiM6JPoQSMRofOgEBmwg4J7pNYdEWEIgNgaEC4SBEH0qZ2JwA+sSNwJC8GIToSMzF7bDQzn8EBiO6/1BAQiAQLwKDEn3IoUq8JoNmoSMwBg8GJTqG8KG7KOQPFYHBiQ6yh+oqkNsGAmNEcyH3KES3ARjaAAKhITAWyUH00DwF8gaLwJgkH53oYysfrNdAcCCgicDoQ3eQXdNiKA4EDBAYnegGMqMKEAgGAV8CmRdE9wWMYLwHggaBgE9+7QXRseQWhN9CyIAR8IboIHvAXgTRvUfAK6KD7N77CwQMFAHviA6yB+pJENtrBLwkOsjutc9AuBYEfEq+1UX0luggO/gUEgI+k1zg6DXRQzI0ZAUCPiMAovtsHcjmPQK+R/IlgCC6964EAX1FIBSSBzd0DwlYX50TcqWJQHARHWRP01GhdT8EgiM6svH9DI7a/RAINdAESXSQvZ+zorYZAqGSPLg5et08IQNv5mqoNQYCMfhZsBF9DIOjTyAQKgIgeqiWg9zOEYghkke5jh6TYZx7MTpICoHoIjrInpT/OlE2Rh+KjuhOLI9Gk0AgRoJHOXRPwhuhpBMEYiZ58MtrKhaP3YAqGKBMOwKp+AeG7mBBsgikQvIkInrVi1MybLLsVVQ8NV9ARFd0DBSLA4HUCJ58Mi5Vg8dBVzMtUrY5IrqZz6BWQAikTPDkIzrm7gEx1VBUQfAyEcV5YdhENNUQ0SumxJc/Dr+GHdftCKLXMEEUiIPs0GIVARC9xSNA+LCogijebS8QXeLPcCC/CQ/7qNkHRFfDicGhFIEaqBjsoQc0iK6HV0l4ZHI1QbNUHNibAwmim2OHmgMhAIL3BxpE748hWnCAAMhtF1QQ3S6eZWuYPzoAFU32QgBE7wUfKttAANHbBopYXnOPokIPiPKrIAEPBaexWAQR3SKYaKodAUTtcb0DRB8X/6s5vfhHTIcvQGwPHKsiAojulz2upAmNKKHJ66nZnYkFojuD1n7Dy3ntWPPbar9jyWAf1TRaBNEjtnP9w1CNust/xzZliNicvVQD0XvBh8pAIAwEQPQw7AQpgUAvBED0XvChMhAIAwEQPQw7QUog0AsBEL0XfKgMBMJAAEQPw06QEgj0QgBE7wUfKgOBMBD4f4fKYfp9jVxvAAAAEGRlQkcxNTk4NUQ2OTcwRjYzNDExig0y6AAAAABJRU5ErkJggg==">
+  <span class="edu-wordmark">edulab</span>
+  <span class="grow"></span>
+  <div class="pickers">
+    <label class="picker"><span>Model</span><select id="model-select" aria-label="Model">
+      <option value="recorded">SmolLM2 135M – recorded</option>
+      <option value="live">LFM3 1.7B – live in your browser</option>
+    </select></label>
+    <label class="picker"><span>Question</span><select id="question-select" aria-label="Question"></select></label>
+  </div>
+</div></header>
+
+<main class="app" id="app">
+  <div class="page-head">
+    <h1 class="app-title">How a chat writes its answer</h1>
+    <p class="edu-lead">Left: what you see in a chat app. Right: what happens behind it – the model writes the answer one token at a time.</p>
+  </div>
+  <div class="panels">
+    <section class="panel-chat" aria-label="What you see">
+      <div class="card">
+        <div class="card-head"><div><h2>What you see</h2><p class="sub">The chat window</p></div></div>
+        <div class="card-body scroll" id="chat"></div>
+        <div class="card-foot"><p class="foot-note" id="chat-foot"></p></div>
+      </div>
+    </section>
+    <section class="panel-stage" aria-label="What happens behind it">
+      <div class="card">
+        <div class="card-head"><h2>What happens behind it</h2><span class="head-meta" id="progress" data-testid="progress"></span></div>
+        <ol class="stepper" id="stepper" aria-label="Stages of text generation"></ol>
+        <div class="card-body scroll" id="stage"></div>
+        <div class="card-foot" id="controls">
+          <button class="btn" data-action="back"><i data-lucide="chevron-left" class="ic" aria-hidden="true"></i>Back</button>
+          <button class="btn btn-primary" data-action="next"><i data-lucide="chevron-right" class="ic" aria-hidden="true"></i>Next step</button>
+          <button class="btn" data-action="next-token"><i data-lucide="skip-forward" class="ic" aria-hidden="true"></i>Next token</button>
+          <button class="btn" data-action="play" id="play-btn">Play</button>
+          <button class="btn btn-text" data-action="restart"><i data-lucide="rotate-ccw" class="ic" aria-hidden="true"></i>Start over</button>
+          <span class="grow"></span>
+          <span class="kbd-hint"><kbd>←</kbd><kbd>→</kbd> step, <kbd>space</kbd> play</span>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script src="traces.js"></script>
+<script>
+/**
+ * How a chat writes its answer – plain HTML/CSS/JS, no build step.
+ *
+ * Recorded mode replays real SmolLM2-135M-Instruct traces (traces.js, written by
+ * scripts/record_traces.py). Live mode runs LiquidAI LFM3-1.7B in the browser
+ * (transformers.js from the CDN, WebGPU): it writes the answers first, recording
+ * the real chances and the drawn token at every step, then the same explainer
+ * replays that run.
+ *
+ * DOM contract on #app: data-trace, data-stage, data-step, data-temperature,
+ * data-answer-length, data-playing, data-source, data-live-status. Bar rows carry
+ * data-chosen="true" for the picked token; Stop-stage rows carry data-run.
+ */
+
+// ─── Constants ───
+
+const STAGES = [
+  { label: "One text", description: "Chat is joined" },
+  { label: "Tokens", description: "Text is split" },
+  { label: "Score", description: "Chance of each token" },
+  { label: "Pick & append", description: "Draw one, add it, repeat" },
+  { label: "Stop", description: "End-of-turn token" },
+];
+const STAGE = { template: 0, tokens: 1, score: 2, pick: 3, stop: 4 };
+
+const PART_LABEL = {
+  special: "Template marker",
+  role: "Role name",
+  system: "System instruction",
+  user: "Your question",
+  answer: "Generated answer",
+};
+
+const PLAY_INTERVAL_MS = 650;
+const CONTEXT_TAIL = 16; // last tokens shown in the "Text so far" strip
+const SHOWN = 5; // candidates shown as bars (the data holds the top 10)
+const DEFAULT_T = "0.7";
+
+const TEMPERATURE_NOTE = {
+  "0": "Temperature 0: no lottery – the top token always wins, so the answer is the same every time.",
+  "0.3": "Low temperature: the favourite gets even more of the chance, so the answer is very predictable.",
+  "0.7": "A common default: mostly the favourite, sometimes another likely token.",
+  "1": "Temperature 1: the model's own chances, unchanged.",
+  "1.5": "High temperature: the chances spread out and unlikely tokens get picked, so the text turns random.",
+};
+
+const SPECIAL = new Set(["<|im_start|>", "<|im_end|>", "<|startoftext|>", "<think>", "</think>"]);
+const END_THINK = "</think>";
+
+const ROLE_NOTE = {
+  system: "instruction added by the app",
+  user: "your question",
+  assistant: "the answer starts here",
+};
+
+// Live model (LFM3-1.7B, ONNX). q4 = 4-bit weights with 32-bit maths: q4f16
+// overflows on WebGPU and the answers turn into garbage (same as workszop/qwen).
+// No CPU fallback: the 4-bit export needs GatherBlockQuantized, which the
+// WebAssembly runtime lacks.
+const TF_URL = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.2";
+const LIVE_MODEL_ID = "onnx-community/LFM3-1.7B-ONNX";
+const LIVE_TEMPS = [0, 0.3, 0.7, 1, 1.5];
+const LIVE_TOPK = 10;
+// LFM3 often writes a draft, "</think>", then the final answer: ~130 tokens for two sentences.
+const LIVE_MAX_NEW = 200;
+const LIVE_SEED = 5;
+
+const DATA = { ...window.TRACES, params: "135 million", source: "recorded" };
+const LIVE_EXAMPLES = DATA.questions.map((q) => q.question);
+
+// ─── State ───
+
+const S = {
+  view: { trace: 0, temp: DEFAULT_T, stage: STAGE.template, step: 0 },
+  source: "recorded", // "recorded" | "live"
+  composing: false, // live: asking a new question
+  isPlaying: false,
+  showIds: false,
+  live: {
+    status: "idle", // idle | loading | ready | generating | error
+    gpu: "checking", // checking | yes | no
+    download: { loaded: 0, total: 0, files: {} },
+    generation: null, // { temperature, step, answer }
+    error: null,
+    dataset: null, // same shape as DATA
+    question: LIVE_EXAMPLES[0],
+  },
+};
+let playTimer = null;
+let tf = null;
+let liveTok = null;
+let liveModel = null;
+let cancelRequested = false;
+let renderQueued = false;
+
+// ─── DOM refs ───
+
+const el = {
+  app: document.getElementById("app"),
+  model: document.getElementById("model-select"),
+  question: document.getElementById("question-select"),
+  chat: document.getElementById("chat"),
+  chatFoot: document.getElementById("chat-foot"),
+  progress: document.getElementById("progress"),
+  stepper: document.getElementById("stepper"),
+  stage: document.getElementById("stage"),
+  controls: document.getElementById("controls"),
+  play: document.getElementById("play-btn"),
+};
+
+// ─── Helpers: data ───
+
+const esc = (s) =>
+  String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+const liveCount = () => S.live.dataset?.questions.length ?? 0;
+const data = () => (S.source === "live" && liveCount() > 0 ? S.live.dataset : DATA);
+const showSetup = () => S.source === "live" && (S.composing || liveCount() === 0);
+
+function getTrace(d, i, t) {
+  const q = d.questions[i];
+  return { question: q.question, prompt: q.prompt, promptTokens: q.promptTokens, eosId: d.eosId, ...q.runs[t] };
+}
+const trace = () => getTrace(data(), S.view.trace, S.view.temp);
+const modelName = (d) => d.model.split("/").pop();
+const isEos = (t, eosId) => t.id === eosId;
+
+/** Token text for display: new lines show as ↵, spaces are left unmarked. */
+const visible = (text) => text.replace(/\n/g, "↵").trim() || "(space)";
+
+function formatPercent(p) {
+  if (p >= 0.995) return `${(p * 100).toFixed(1)}%`;
+  if (p >= 0.1) return `${Math.round(p * 100)}%`;
+  if (p >= 0.001) return `${(p * 100).toFixed(1)}%`;
+  return "<0.1%";
+}
+
+/** Template markers before the first turn (LFM3's <|startoftext|>). */
+function leadingTokens(tokens) {
+  const i = tokens.findIndex((t) => t.text === "<|im_start|>");
+  return i > 0 ? tokens.slice(0, i) : [];
+}
+
+/** Split the prompt into chat turns: header (markers + role), content, footer. */
+function splitTurns(tokens) {
+  const turns = [];
+  let cur = null;
+  let zone = "footer";
+  for (const t of tokens) {
+    if (t.text === "<|im_start|>") {
+      cur = { role: "", header: [t], content: [], footer: [] };
+      turns.push(cur);
+      zone = "header";
+      continue;
+    }
+    if (!cur) continue;
+    if (t.text === "<|im_end|>") zone = "footer";
+    if (zone === "header") {
+      cur.header.push(t);
+      if (t.text.includes("\n")) zone = "content";
+      else cur.role += t.text;
+    } else if (zone === "content" && cur.content.length === 0 && SPECIAL.has(t.text) && t.text !== "<|im_end|>") {
+      cur.header.push(t); // e.g. the empty <think></think> that opens the answer
+    } else {
+      cur[zone].push(t);
+    }
+  }
+  return turns;
+}
+
+/** Label each prompt token with the part of the chat it belongs to. */
+function classifyPrompt(tokens) {
+  const parts = [];
+  let mode = "outside";
+  let role = "";
+  for (const t of tokens) {
+    if (SPECIAL.has(t.text)) {
+      parts.push("special");
+      mode = t.text === "<|im_start|>" ? "role" : "outside";
+      if (mode === "role") role = "";
+      continue;
+    }
+    if (mode === "role") {
+      parts.push("role");
+      if (t.text.includes("\n")) mode = "content";
+      else role += t.text;
+      continue;
+    }
+    if (mode === "content") {
+      parts.push(role === "system" ? "system" : role === "user" ? "user" : "answer");
+      continue;
+    }
+    parts.push("special"); // the "\n" between turns belongs to the template
+  }
+  return parts;
+}
+
+/**
+ * Text the chat shows after `count` generated tokens. LFM3 sometimes writes a
+ * draft and closes it with "</think>" even with thinking off: like a chat app,
+ * the text before that marker becomes "thinking" once the marker appears.
+ */
+function answerParts(tr, count) {
+  const steps = tr.steps.slice(0, count).filter((s) => !isEos(s.chosen, tr.eosId));
+  const cut = steps.findIndex((s) => s.chosen.text === END_THINK);
+  const join = (xs) => xs.map((s) => s.delta).join("");
+  if (cut === -1) return { thinking: null, answer: join(steps) };
+  return { thinking: join(steps.slice(0, cut)), answer: join(steps.slice(cut + 1)) };
+}
+
+function finalAnswer(answer) {
+  const i = answer.indexOf(END_THINK);
+  return i === -1 ? answer : answer.slice(i + END_THINK.length);
+}
+
+// ─── Helpers: navigation ───
+
+function nextView(v, tr) {
+  const last = tr.steps.length - 1;
+  switch (v.stage) {
+    case STAGE.template: return { ...v, stage: STAGE.tokens };
+    case STAGE.tokens: return { ...v, stage: STAGE.score, step: 0 };
+    case STAGE.score: return { ...v, stage: STAGE.pick };
+    case STAGE.pick:
+      return v.step < last && !isEos(tr.steps[v.step].chosen, tr.eosId)
+        ? { ...v, stage: STAGE.score, step: v.step + 1 }
+        : { ...v, stage: STAGE.stop };
+    default: return v;
+  }
+}
+
+function prevView(v) {
+  switch (v.stage) {
+    case STAGE.tokens: return { ...v, stage: STAGE.template };
+    case STAGE.score: return v.step === 0 ? { ...v, stage: STAGE.tokens } : { ...v, stage: STAGE.pick, step: v.step - 1 };
+    case STAGE.pick: return { ...v, stage: STAGE.score };
+    case STAGE.stop: return { ...v, stage: STAGE.pick };
+    default: return v;
+  }
+}
+
+/** Jump to "token picked and appended" for the next token (or Stop). */
+function nextTokenView(v, tr) {
+  if (v.stage < STAGE.score) return { ...v, stage: STAGE.pick, step: 0 };
+  if (v.stage === STAGE.stop) return v;
+  if (v.stage === STAGE.score) return { ...v, stage: STAGE.pick };
+  return nextView(v, tr).stage === STAGE.stop ? { ...v, stage: STAGE.stop } : { ...v, stage: STAGE.pick, step: v.step + 1 };
+}
+
+/** How many generated tokens the chat shows in this view. */
+function shownCount(v, tr) {
+  if (v.stage < STAGE.score) return 0;
+  if (v.stage === STAGE.stop) return tr.steps.length;
+  return v.stage === STAGE.pick ? v.step + 1 : v.step;
+}
+
+// ─── Render: small pieces ───
+
+function icons(root = document) {
+  if (window.lucide) window.lucide.createIcons({ root });
+}
+
+function chip(text, cls, title, size = "") {
+  return `<span class="tok tok-${cls}${size ? ` tok-${size}` : ""}"${title ? ` title="${esc(title)}"` : ""}>${esc(text)}</span>`;
+}
+
+function tokenChip(t, part, size) {
+  const label = S.showIds && t.id !== undefined ? `${visible(t.text)} · ${t.id}` : visible(t.text);
+  return chip(label, part, PART_LABEL[part], size);
+}
+
+function legend(parts) {
+  return `<div class="legend">${parts.map((p) => chip(PART_LABEL[p], p)).join("")}<span>↵ = new line</span></div>`;
+}
+
+/** Template markers and role tokens of a turn header. */
+function markers(tokens, role, asTokens) {
+  return tokens
+    .map((t) => {
+      const label = S.showIds ? `${visible(t.text)} · ${t.id}` : visible(t.text);
+      if (SPECIAL.has(t.text)) return chip(S.showIds ? `${t.text} · ${t.id}` : t.text, "special", PART_LABEL.special, "sm");
+      if (!asTokens && !t.text.trim()) return "";
+      const isNewline = t.text.includes("\n") && !t.text.trim();
+      return chip(label, isNewline ? "special" : "role", t.text.trim() ? `Role name: ${role}` : "New line", "sm");
+    })
+    .join("");
+}
+
+/** The chat template, one box per turn: markers small, the message text big. */
+function templateView(tr, asTokens) {
+  const turns = splitTurns(tr.promptTokens);
+  const lead = leadingTokens(tr.promptTokens);
+  const content = (role) => (role === "system" ? "system" : role === "user" ? "user" : "answer");
+  const leadRow = lead.length
+    ? `<div class="tokens">${markers(lead, "", asTokens)}<span class="turn-note">start of the whole text</span></div>`
+    : "";
+  const rows = turns
+    .map((turn) => {
+      const head = asTokens
+        ? markers(turn.header, turn.role, true)
+        : markers(turn.header.slice(0, 1), turn.role, false) +
+          `<span class="role-chip role-${esc(turn.role)}" title="Role name">${esc(turn.role)}</span>` +
+          markers(turn.header.slice(1).filter((t) => SPECIAL.has(t.text)), turn.role, false);
+      const body = turn.content.length
+        ? asTokens
+          ? `<div class="tokens">${turn.content.map((t) => tokenChip(t, content(turn.role), "lg")).join("")}</div>`
+          : `<p class="txt big">${esc(turn.content.map((t) => t.text).join(""))}</p>`
+        : "";
+      const empty = turn.role === "assistant"
+        ? `<p class="note">Nothing here yet – the model writes the answer from this point, one token at a time.</p>`
+        : "";
+      const foot = turn.footer.length ? `<div class="tokens">${markers(turn.footer, turn.role, asTokens)}</div>` : "";
+      return `<div class="turn"><div class="turn-head">${head}<span class="turn-note">${esc(ROLE_NOTE[turn.role] ?? "")}</span></div>` +
+        `<div class="turn-body">${body}${empty}${foot}</div></div>`;
+    })
+    .join("");
+  return `<div class="turns">${leadRow}${rows}</div>`;
+}
+
+function contextStrip(tr, upto, withSlot) {
+  const parts = classifyPrompt(tr.promptTokens);
+  const all = [
+    ...tr.promptTokens.map((t, i) => ({ text: t.text, part: parts[i] })),
+    ...tr.steps
+      .slice(0, upto)
+      .filter((s) => !isEos(s.chosen, tr.eosId))
+      .map((s) => ({ text: s.chosen.text, part: SPECIAL.has(s.chosen.text) ? "special" : "answer" })),
+  ];
+  const shown = all.slice(-CONTEXT_TAIL);
+  return `<div class="tokens"><span class="note">… ${all.length - shown.length} earlier tokens</span>` +
+    shown.map((t) => tokenChip({ text: t.text }, t.part, "")).join("") +
+    (withSlot ? chip("next token", "next", "The next token, not chosen yet") : "") +
+    `</div>`;
+}
+
+function probabilityBars(d, tr, step, temp, isPicked) {
+  const s = tr.steps[step];
+  const probs = s.probs[temp].slice(0, SHOWN);
+  // A picked token outside the top 5 gets its own row – only once it is picked,
+  // so the Score step does not give the pick away.
+  const outside = isPicked && (s.rank === null || s.rank > SHOWN);
+  const extra = outside ? s.chosenProb[temp] : 0;
+  const rest = Math.max(0, 1 - probs.reduce((a, b) => a + b, 0) - extra);
+  const others = d.vocabSize - SHOWN - (outside ? 1 : 0);
+  const row = (label, p, chosen, isEnd) => {
+    const chipCls = chosen && isPicked ? "answer" : isEnd ? "special" : "plain";
+    const fill = !isPicked ? "" : chosen ? "picked" : "muted";
+    return `<div class="bar-row"${chosen ? ' data-chosen="true"' : ""}>` +
+      `<span class="bar-label">${chip(label, chipCls)}</span>` +
+      `<div class="bar" role="progressbar" aria-label="Probability of ${esc(label)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${p * 100}">` +
+      `<div class="bar-fill ${fill}" style="width:${(p * 100).toFixed(3)}%"></div></div>` +
+      `<span class="bar-val">${formatPercent(p)}</span></div>`;
+  };
+  return `<div class="bars">` +
+    s.candidates.slice(0, SHOWN).map((c, i) => row(visible(c.text), probs[i], isPicked && c.id === s.chosen.id, isEos(c, tr.eosId))).join("") +
+    (outside ? row(visible(s.chosen.text), s.chosenProb[temp], true, false) : "") +
+    `<div class="bar-row"><span class="bar-others">${others.toLocaleString("en")} other tokens</span>` +
+    `<div class="bar" role="progressbar" aria-label="Probability of all other tokens" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${rest * 100}">` +
+    `<div class="bar-fill rest" style="width:${(rest * 100).toFixed(3)}%"></div></div>` +
+    `<span class="bar-val">${formatPercent(rest)}</span></div></div>`;
+}
+
+function temperatureControl(d) {
+  return `<div class="row"><span class="label">Temperature</span>` +
+    `<div class="seg" role="radiogroup" aria-label="Temperature">` +
+    d.temperatures.map((t) => {
+      const k = String(t);
+      const on = k === S.view.temp;
+      return `<button role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}" data-action="temp" data-temp="${k}">${k}</button>`;
+    }).join("") +
+    `</div></div>`;
+}
+
+// ─── Render: stage bodies ───
+
+function stageBody() {
+  const d = data();
+  const tr = trace();
+  const v = S.view;
+  const s = tr.steps[Math.min(v.step, tr.steps.length - 1)];
+  const name = modelName(d);
+  const hasSystem = tr.promptTokens.some((t, i) => t.text === "system" && tr.promptTokens[i - 1]?.text === "<|im_start|>");
+  const hasThink = tr.promptTokens.some((t) => t.text === "<think>");
+
+  if (v.stage === STAGE.template) {
+    return `<div class="stack">
+      <p class="txt">The model does not see chat bubbles. The app glues the conversation into <b>one long text</b>, with markers that say who is talking. It ends with the start of an <b>assistant</b> turn, so the most natural thing to write next is the answer.</p>
+      ${templateView(tr, false)}
+      ${hasThink ? `<p class="note">${esc(name)} can think out loud before it answers. The app switched that off, so the template already holds an empty thinking block (<b>&lt;think&gt;&lt;/think&gt;</b>) and the answer comes straight after it.</p>` : ""}
+      <p class="note">${hasSystem ? "The system instruction was added by the app, not typed by you. " : ""}Each model family has its own template; this is the one ${esc(name)} was trained with.</p>
+    </div>`;
+  }
+
+  if (v.stage === STAGE.tokens) {
+    return `<div class="stack">
+      <p class="txt">Next the text is cut into <b>tokens</b> – whole words, pieces of words and punctuation. Each token is a number in the model's vocabulary of <b>${d.vocabSize.toLocaleString("en")}</b> tokens. The model only ever works with these numbers.</p>
+      <div class="row"><b>${tr.promptTokens.length} tokens</b>
+        <button class="switch" role="switch" aria-checked="${S.showIds}" data-action="ids"><span class="switch-track" aria-hidden="true"></span>Show token numbers</button></div>
+      ${templateView(tr, true)}
+      ${legend(hasSystem ? ["special", "role", "system", "user"] : ["special", "role", "user"])}
+      <p class="note">${hasSystem ? "Look for words split in two, like “H” + “ugging” or “ass” + “istant”." : "Common words are one token each; rare or long words are split into pieces."}</p>
+    </div>`;
+  }
+
+  if (v.stage === STAGE.score || v.stage === STAGE.pick) {
+    const isPicked = v.stage === STAGE.pick;
+    const isEnd = isEos(s.chosen, tr.eosId);
+    const rankText = s.rank === 1 ? "the most likely token" : s.rank === null ? `a rare token outside the top ${d.topK}` : `only number ${s.rank} on the list`;
+    let intro;
+    if (!isPicked) {
+      intro = `The model reads all the tokens so far and gives <b>every</b> token in its vocabulary a chance of coming next. Here are the top ${SHOWN} for token ${v.step + 1}.`;
+    } else {
+      const pick = v.temp === "0"
+        ? `At temperature 0 there is no lottery: the app always takes the most likely token, <b>“${esc(visible(s.chosen.text))}”</b>. `
+        : `The app draws one token at random, using these chances like a weighted lottery. It picked <b>“${esc(visible(s.chosen.text))}”</b> (${formatPercent(s.chosenProb[v.temp])} chance) – ${rankText}. `;
+      const after = isEnd
+        ? "That is the end-of-turn marker, so nothing is added – the answer is finished."
+        : s.chosen.text === END_THINK
+          ? `That is the end-of-thinking marker: everything before it was the model's draft, which chat apps hide or fold away. The answer the person sees starts with token ${v.step + 2}.`
+          : `It is added to the end of the text and shown in the chat, and the whole text goes back into the model to score token ${v.step + 2}. One token at a time – that is the “typing” you see.`;
+      intro = pick + esc(after);
+    }
+    return `<div class="stack">
+      <p class="txt">${intro}</p>
+      <div class="box"><div class="box-head"><span class="label">Text so far</span></div>
+        <div class="box-body">${contextStrip(tr, isPicked ? v.step + 1 : v.step, !isPicked)}${legend(["special", "role", "user", "answer"])}</div></div>
+      <div class="box"><div class="box-head"><span class="label">Chances for token ${v.step + 1}</span>${temperatureControl(d)}</div>
+        <div class="box-body">${probabilityBars(d, tr, v.step, v.temp, isPicked)}
+          <p class="note">${esc(TEMPERATURE_NOTE[v.temp])} Changing it starts the answer again – each temperature is its own real run of the model.</p></div></div>
+    </div>`;
+  }
+
+  // Stop
+  const eosStep = tr.steps.find((x) => isEos(x.chosen, tr.eosId));
+  const generated = tr.steps.filter((x) => !isEos(x.chosen, tr.eosId)).length;
+  const notTop = tr.steps.filter((x) => x.rank !== 1).length;
+  const head = tr.finished
+    ? `This time the model picked the special <b>end-of-turn</b> token ${chip(eosStep?.chosen.text ?? "<|im_end|>", "special")}${eosStep ? ` (${formatPercent(eosStep.chosenProb[v.temp])} chance)` : ""}. The app stops asking for more and does not show that marker. The answer is done.`
+    : `The app stopped at its length limit of ${tr.steps.length} tokens before the model chose to end.`;
+  const runs = d.temperatures.map((t) => {
+    const k = String(t);
+    const run = d.questions[v.trace].runs[k];
+    const cur = k === v.temp;
+    const draft = run.answer.includes(END_THINK) ? ` <span class="note">(after a draft closed with ${esc(END_THINK)})</span>` : "";
+    return `<div class="run${cur ? " current" : ""}" data-run="${k}">
+      <button class="btn btn-sm${cur ? " btn-primary" : ""}" aria-label="Temperature ${k}" data-action="run" data-temp="${k}">${k}</button>
+      <p class="run-text keep-lines">${esc(finalAnswer(run.answer).trim())}${run.finished ? "" : " … (stopped at the length limit)"}${draft}</p></div>`;
+  }).join("");
+  return `<div class="stack">
+    <p class="txt">${head}</p>
+    <div class="box"><div class="box-body">
+      <p class="txt"><b>${tr.steps.length}</b> passes through the model: ${generated} tokens of answer${tr.finished ? " plus the end-of-turn token" : ""}.</p>
+      <p class="txt"><b>${notTop}</b> of ${tr.steps.length} picks were not the single most likely token.</p>
+      <p class="txt">The question plus the answer is now <b>${tr.promptTokens.length + tr.steps.length}</b> tokens. If you ask a follow-up, all of it is sent again – the model has no memory between turns.</p>
+    </div></div>
+    <div class="box"><div class="box-head"><span class="label">The same question at every temperature – real runs of the model</span></div>
+      <div class="box-body"><div class="runs">${runs}</div><p class="note">Pick a temperature to watch that answer being written.</p></div></div>
+    <p class="note">Big chat models work exactly the same way. They have hundreds of billions of parameters instead of ${esc(d.params)}, so their guesses are much better – but they still write one token at a time.</p>
+  </div>`;
+}
+
+const MB = (bytes) => `${Math.round(bytes / 1e6).toLocaleString("en")} MB`;
+
+/** Right-hand panel before a live answer exists: how it works, download, question. */
+function liveSetupBody() {
+  const L = S.live;
+  const st = L.status;
+  const dl = L.download;
+  const downloaded = dl.total > 0 && dl.loaded >= dl.total;
+  const g = L.generation;
+  const tIndex = g ? LIVE_TEMPS.indexOf(g.temperature) : 0;
+  const overall = g ? ((tIndex + g.step / LIVE_MAX_NEW) / LIVE_TEMPS.length) * 100 : 0;
+  const busy = st === "generating";
+  let action = "";
+
+  if (st === "idle") {
+    action = (L.gpu === "no"
+      ? `<div class="callout callout-yellow"><h3>Warning: this browser has no WebGPU</h3><p>The live model needs the graphics card through WebGPU. Open this page in Chrome or Edge – or use the recorded SmolLM2 examples.</p></div>`
+      : "") +
+      `<div class="row"><button class="btn btn-primary" data-action="live-load"${L.gpu === "yes" ? "" : " disabled"}>Download and start the model</button>
+        <span class="note">${L.gpu === "yes" ? "WebGPU found – the model will run on the graphics card." : L.gpu === "checking" ? "Checking for WebGPU…" : "WebGPU is missing."}</span></div>`;
+  } else if (st === "loading") {
+    action = !downloaded
+      ? `<div class="progress"><span class="progress-label">${dl.total ? `Downloading the model: ${MB(dl.loaded)} of ${MB(dl.total)}` : "Starting the download…"}</span>
+          <div class="bar" role="progressbar" aria-label="Download" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${dl.total ? (dl.loaded / dl.total) * 100 : 0}"><div class="bar-fill" style="width:${dl.total ? ((dl.loaded / dl.total) * 100).toFixed(1) : 0}%"></div></div></div>`
+      : `<div class="row"><span class="spinner" aria-hidden="true"></span><span class="progress-label">Loading the model into memory…</span></div>`;
+  } else if (st === "error") {
+    action = `<div class="callout callout-red" role="alert"><h3>The model could not start</h3><p>${esc(L.error ?? "")}</p></div>
+      <div class="row"><button class="btn" data-action="live-load">Try again</button></div>`;
+  } else {
+    action = `${L.error ? `<div class="callout callout-red"><h3>Generation failed</h3><p>${esc(L.error)}</p></div>` : ""}
+      <p class="note">Model ready on the graphics card (WebGPU).</p>
+      <div class="field"><label class="label" for="live-q">Your question</label>
+        <textarea class="input" id="live-q" rows="2"${busy ? " disabled" : ""}>${esc(L.question)}</textarea></div>
+      <div class="row"><span class="note">Examples:</span>${LIVE_EXAMPLES.map((q) => `<button class="btn btn-sm" data-action="live-example" data-q="${esc(q)}"${busy ? " disabled" : ""}>${esc(q)}</button>`).join("")}</div>
+      <p class="note">Tip: ask for a set length (“in two sentences”, “a haiku”) – open questions often run past the ${LIVE_MAX_NEW}-token limit.</p>
+      <div class="row"><button class="btn btn-primary" data-action="live-ask"${st === "ready" && L.question.trim() ? "" : " disabled"}>Write the answer at ${LIVE_TEMPS.length} temperatures</button>
+        ${liveCount() > 0 && st === "ready" ? `<button class="btn btn-text" data-action="live-back">Back to the explanation</button>` : ""}</div>
+      ${busy ? `<div class="box"><div class="box-body">
+        <div class="progress"><span class="progress-label">${g ? `Temperature ${g.temperature}: token ${g.step}` : "Reading the question…"}</span>
+          <div class="bar" role="progressbar" aria-label="Writing the answers" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${overall}"><div class="bar-fill" style="width:${overall.toFixed(1)}%"></div></div></div>
+        <p class="note">One answer per temperature (${LIVE_TEMPS.join(", ")}), up to ${LIVE_MAX_NEW} tokens each – you can watch them being written in the chat on the left. For every token the app records the model's top ${LIVE_TOPK} chances and the token it drew; the explanation then replays them step by step.</p>
+        <div class="row"><button class="btn btn-sm btn-text" data-action="live-cancel">Cancel</button></div></div></div>` : ""}`;
+  }
+
+  return `<div class="stack" data-live-status="${st}">
+    <p class="txt">LFM3-1.7B is a chat model from Liquid AI with <b>1.7 billion</b> parameters – about 13 times bigger than the recorded SmolLM2 model. It runs entirely on this computer: the browser downloads it once (about 1.3 GB, kept in the browser's cache) and your question never leaves this page. It needs a browser with WebGPU (Chrome or Edge) to use the graphics card.</p>
+    <div class="callout callout-blue" data-testid="live-how">
+      <h3>How the live mode works: first real answers, then the replay</h3>
+      <p><b>1. The model writes the real answers first.</b> When you press the button, LFM3 answers your question ${LIVE_TEMPS.length} times, once per temperature (${LIVE_TEMPS.join(", ")}). This is ordinary generation, one token at a time, exactly as in a chat app.</p>
+      <p><b>2. Every step is written down.</b> Before each token is chosen, the app saves the model's real chances for the top ${LIVE_TOPK} tokens (out of all 128,000) and then the token that was drawn with those chances. The model continues from that token, so the saved steps add up to its real answer.</p>
+      <p><b>3. The chat replays that run.</b> The explanation then plays the saved steps back as slowly as you like – the template, the tokens, the chances and every pick. Nothing is recomputed or made up: the chat shows the answer the model really wrote, and each bar is the chance it really gave.</p>
+      <p>Why record first instead of showing it live? The model is fast (about 10–30 tokens a second), far too fast to follow. With the run saved, you can step back and forth, and switch temperatures to compare real answers side by side.</p>
+    </div>
+    ${action}
+  </div>`;
+}
+
+// ─── Render: panels ───
+
+function renderPickers() {
+  el.model.value = S.source;
+  const setup = showSetup();
+  const qs = setup && liveCount() === 0 ? [] : data().questions;
+  const opts = qs.map((q, i) => `<option value="${i}">${esc(q.question)}</option>`);
+  if (S.source === "live") opts.push(`<option value="new">Ask your own question…</option>`);
+  el.question.innerHTML = opts.join("");
+  el.question.value = setup ? "new" : String(S.view.trace);
+}
+
+function renderChat() {
+  const L = S.live;
+  if (showSetup()) {
+    const q = L.question.trim();
+    let html = q ? `<div class="msg msg-user"><div class="bubble">${esc(q)}</div></div>` : "";
+    if (L.status === "generating") {
+      html += `<div class="msg msg-bot"><span class="avatar" aria-hidden="true">A</span><div class="bubble"><span class="keep-lines" data-testid="live-preview">${esc(L.generation?.answer || "…")}<span class="caret">▍</span></span></div></div>`;
+      if (L.generation) html += `<p class="sys">Writing the answer at temperature ${L.generation.temperature}</p>`;
+    } else {
+      html += `<p class="sys">${L.status === "ready" ? "Model ready – send the question from the panel on the right" : L.status === "loading" ? "Loading the model…" : "The model is not loaded yet – start it on the right"}</p>`;
+    }
+    el.chat.innerHTML = `<div class="chat">${html}</div>`;
+    el.chatFoot.textContent = "LFM3-1.7B (1.7 billion parameters) runs in this browser on the graphics card.";
+    return { answer: "" };
+  }
+  const d = data();
+  const tr = trace();
+  const v = S.view;
+  const atEnd = v.stage === STAGE.stop;
+  const isGenerating = v.stage >= STAGE.score && !atEnd;
+  // Until "</think>" appears the app cannot know the text is a draft, so it shows
+  // it as the answer; once the marker arrives the draft folds away.
+  const { thinking, answer } = answerParts(tr, shownCount(v, tr));
+  let html = `<div class="msg msg-user"><div class="bubble">${esc(tr.question)}</div></div>`;
+  if (v.stage < STAGE.score) {
+    html += `<p class="sys">Sent – waiting for the answer…</p>`;
+  } else {
+    html += `<div class="msg msg-bot"><span class="avatar" aria-hidden="true">A</span><div class="bubble">` +
+      (thinking !== null ? `<div class="thinking" data-testid="chat-thinking"><b>Thinking – a draft, which chat apps hide or fold away</b><span class="keep-lines">${esc(thinking)}</span></div>` : "") +
+      `<span class="keep-lines" data-testid="chat-answer">${esc(answer || (isGenerating ? "…" : ""))}${isGenerating && answer ? '<span class="caret">▍</span>' : ""}</span></div></div>`;
+  }
+  if (atEnd) html += `<p class="sys">${tr.finished ? "Answer complete" : "Cut off – the app's length limit was reached"}</p>`;
+  el.chat.innerHTML = `<div class="chat">${html}</div>`;
+  el.chatFoot.textContent = (d.source === "live"
+    ? `Written live in this browser by ${modelName(d)} (${d.params} parameters), then replayed here token by token from its real run.`
+    : `Recorded from the real model ${modelName(d)} (${d.params} parameters) running on this computer.`) +
+    " Every number in the explanation is its real output.";
+  return { answer };
+}
+
+function renderStage() {
+  const setup = showSetup();
+  el.stepper.hidden = setup;
+  el.controls.hidden = setup;
+  if (setup) {
+    el.progress.textContent = "Run LFM3-1.7B in your browser";
+    el.stage.innerHTML = liveSetupBody();
+    return;
+  }
+  const tr = trace();
+  const v = S.view;
+  const atEnd = v.stage === STAGE.stop;
+  el.progress.textContent = v.stage < STAGE.score
+    ? `Stage ${v.stage + 1} of ${STAGES.length}`
+    : atEnd ? `Done – ${tr.steps.length} tokens` : `Token ${v.step + 1} of ${tr.steps.length}`;
+  el.stepper.innerHTML = STAGES.map((s, i) => {
+    const cls = i === v.stage ? "active" : i < v.stage ? "done" : "";
+    return `<li><button class="step ${cls}" data-action="goto" data-index="${i}"${i === v.stage ? ' aria-current="step"' : ""}>` +
+      `<span class="step-n">${i < v.stage ? "✓" : i + 1}</span><span class="step-t"><b>${s.label}</b><small>${s.description}</small></span></button></li>`;
+  }).join("");
+  el.stage.innerHTML = stageBody();
+  const set = (action, disabled) => { el.controls.querySelector(`[data-action="${action}"]`).disabled = disabled; };
+  set("back", v.stage === STAGE.template);
+  set("next", atEnd);
+  set("next-token", atEnd);
+  set("play", atEnd);
+  el.play.innerHTML = `<i data-lucide="${S.isPlaying ? "pause" : "play"}" class="ic" aria-hidden="true"></i>${S.isPlaying ? "Pause" : "Play"}`;
+  icons(el.controls);
+}
+
+function render() {
+  if (S.view.stage === STAGE.stop || showSetup()) S.isPlaying = false; // nothing left to play
+  renderPickers();
+  const { answer } = renderChat();
+  renderStage();
+  const v = S.view;
+  Object.assign(el.app.dataset, {
+    trace: v.trace, stage: v.stage, step: v.step, temperature: v.temp,
+    answerLength: answer.length, playing: String(S.isPlaying),
+    source: S.source, liveStatus: S.live.status,
+  });
+  schedulePlay();
+}
+
+/** Coalesce frequent updates (download and generation progress) into one frame. */
+function queueRender() {
+  if (renderQueued) return;
+  renderQueued = true;
+  requestAnimationFrame(() => { renderQueued = false; render(); });
+}
+
+// ─── Actions ───
+
+function setView(fn) {
+  S.view = fn(S.view);
+  render();
+}
+
+function stopPlaying() {
+  S.isPlaying = false;
+}
+
+function schedulePlay() {
+  clearTimeout(playTimer);
+  if (!S.isPlaying || showSetup()) return;
+  if (S.view.stage === STAGE.stop) { S.isPlaying = false; return; }
+  playTimer = setTimeout(() => setView((v) => nextTokenView(v, trace())), PLAY_INTERVAL_MS);
+}
+
+function setTemperature(t) {
+  stopPlaying();
+  // A different temperature is a different run: restart the answer.
+  setView((v) => ({ ...v, temp: t, stage: v.stage >= STAGE.score ? STAGE.score : v.stage, step: 0 }));
+}
+
+function chooseSource(src) {
+  stopPlaying();
+  S.source = src;
+  S.composing = false;
+  S.view = { ...S.view, stage: STAGE.template, step: 0, trace: src === "live" ? Math.max(0, liveCount() - 1) : 0 };
+  render();
+}
+
+function chooseQuestion(value) {
+  stopPlaying();
+  if (value === "new") { S.composing = true; render(); return; }
+  S.composing = false;
+  setView((v) => ({ ...v, trace: Number(value), stage: STAGE.template, step: 0 }));
+}
+
+// ─── Live model ───
+
+async function checkWebGPU() {
+  try {
+    const adapter = navigator.gpu ? await navigator.gpu.requestAdapter() : null;
+    S.live.gpu = adapter ? "yes" : "no";
+  } catch {
+    S.live.gpu = "no";
+  }
+  if (showSetup()) render();
+}
+
+function onDownloadProgress(info) {
+  if (info?.status !== "progress" || !info.file) return;
+  const dl = S.live.download;
+  dl.files[info.file] = { loaded: info.loaded ?? 0, total: info.total ?? 0 };
+  dl.loaded = 0;
+  dl.total = 0;
+  for (const f of Object.values(dl.files)) { dl.loaded += f.loaded; dl.total += f.total; }
+  queueRender();
+}
+
+async function liveLoad() {
+  const L = S.live;
+  L.status = "loading";
+  L.error = null;
+  render();
+  try {
+    tf = tf ?? (await import(TF_URL));
+    const dtype = new URLSearchParams(location.search).get("live-dtype") || "q4"; // testing override
+    liveTok = await tf.AutoTokenizer.from_pretrained(LIVE_MODEL_ID, { progress_callback: onDownloadProgress });
+    liveModel = await tf.AutoModelForCausalLM.from_pretrained(LIVE_MODEL_ID, { dtype, device: "webgpu", progress_callback: onDownloadProgress });
+    const eos = liveModel.generation_config?.eos_token_id ?? liveModel.config.eos_token_id;
+    L.dataset = {
+      model: "LiquidAI/LFM3-1.7B",
+      vocabSize: liveModel.config.vocab_size,
+      temperatures: LIVE_TEMPS,
+      topK: LIVE_TOPK,
+      eosId: Array.isArray(eos) ? eos[0] : eos,
+      params: "1.7 billion",
+      source: "live",
+      questions: [],
+    };
+    L.status = "ready";
+  } catch (err) {
+    L.status = "error";
+    L.error = err?.message ?? String(err);
+  }
+  render();
+}
+
+/** Small seeded random generator (mulberry32), so a run can be repeated. */
+function seededRandom(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** Chances for every token: softmax(scores / T), or all on the top token at T=0. */
+function chances(scores, t) {
+  const n = scores.length;
+  const p = new Float64Array(n);
+  let best = 0;
+  for (let i = 1; i < n; i++) if (scores[i] > scores[best]) best = i;
+  if (t === 0) { p[best] = 1; return p; }
+  let sum = 0;
+  for (let i = 0; i < n; i++) { p[i] = Math.exp((scores[i] - scores[best]) / t); sum += p[i]; }
+  for (let i = 0; i < n; i++) p[i] /= sum;
+  return p;
+}
+
+/** Indices of the k highest scores, best first. */
+function topK(scores, k) {
+  const best = [];
+  for (let i = 0; i < scores.length; i++) {
+    if (best.length < k || scores[i] > scores[best[best.length - 1]]) {
+      let j = best.length < k ? best.length : k - 1;
+      best[j] = i;
+      while (j > 0 && scores[best[j]] > scores[best[j - 1]]) { [best[j], best[j - 1]] = [best[j - 1], best[j]]; j--; }
+    }
+  }
+  return best;
+}
+
+function draw(p, rand) {
+  let r = rand();
+  for (let i = 0; i < p.length; i++) { r -= p[i]; if (r <= 0) return i; }
+  for (let i = p.length - 1; i >= 0; i--) if (p[i] > 0) return i;
+  return 0;
+}
+
+const round5 = (p) => Math.round(p * 1e5) / 1e5;
+
+/**
+ * One answer at one temperature, recorded step by step. A logits processor sees
+ * the model's real scores, turns them into chances, draws a token with a seeded
+ * generator, records the step and masks every other token, so the greedy step of
+ * transformers.js takes exactly the token we drew.
+ */
+async function liveRun(inputIds, t, eosId) {
+  const rand = seededRandom(LIVE_SEED);
+  const key = String(t);
+  const steps = [];
+  const chosenIds = [];
+  let shown = "";
+  const decode = (ids, skip) => liveTok.decode(ids, { skip_special_tokens: skip });
+
+  class Recorder extends tf.LogitsProcessor {
+    _call(_ids, logits) {
+      const dataArr = logits[0].data;
+      const scores = Float32Array.from(dataArr);
+      const cand = topK(scores, LIVE_TOPK);
+      const p = chances(scores, t);
+      const chosen = t === 0 ? cand[0] : draw(p, rand);
+      chosenIds.push(chosen);
+      // What this token adds to the visible text (complete characters only).
+      const clean = decode(chosenIds, true).replace(/�+$/, "");
+      const delta = clean.startsWith(shown) ? clean.slice(shown.length) : "";
+      if (clean.startsWith(shown)) shown = clean;
+      const rank = cand.indexOf(chosen);
+      steps.push({
+        candidates: cand.map((id) => ({ id, text: decode([id], false) })),
+        probs: { [key]: cand.map((id) => round5(p[id])) },
+        chosen: { id: chosen, text: decode([chosen], false) },
+        chosenProb: { [key]: round5(p[chosen]) },
+        rank: rank === -1 ? null : rank + 1,
+        delta,
+      });
+      S.live.generation = { temperature: t, step: steps.length, answer: shown };
+      queueRender();
+      const force = cancelRequested ? eosId : chosen;
+      dataArr.fill(-Infinity);
+      dataArr[force] = 0;
+      return logits;
+    }
+  }
+
+  const processors = new tf.LogitsProcessorList();
+  processors.push(new Recorder());
+  const n = inputIds.length;
+  await liveModel.generate({
+    input_ids: new tf.Tensor("int64", BigInt64Array.from(inputIds.map(BigInt)), [1, n]),
+    attention_mask: new tf.Tensor("int64", new BigInt64Array(n).fill(1n), [1, n]),
+    max_new_tokens: LIVE_MAX_NEW,
+    do_sample: false,
+    repetition_penalty: 1,
+    logits_processor: processors,
+  });
+  return {
+    steps,
+    answer: decode(chosenIds, true),
+    finished: chosenIds.at(-1) === eosId,
+    seed: LIVE_SEED,
+    sampleTemperature: t,
+  };
+}
+
+async function liveAsk() {
+  const L = S.live;
+  const question = L.question.trim();
+  if (!question || L.status !== "ready") return;
+  L.status = "generating";
+  L.error = null;
+  L.generation = null;
+  cancelRequested = false;
+  render();
+  try {
+    // Thinking off: the template then closes an empty <think></think> block.
+    const prompt = liveTok.apply_chat_template([{ role: "user", content: question }], {
+      tokenize: false, add_generation_prompt: true, enable_thinking: false,
+    });
+    const inputIds = Array.from(liveTok.encode(prompt, { add_special_tokens: false }));
+    const promptTokens = inputIds.map((id) => ({ id, text: liveTok.decode([id], { skip_special_tokens: false }) }));
+    const runs = {};
+    for (const t of LIVE_TEMPS) {
+      if (cancelRequested) break;
+      runs[String(t)] = await liveRun(inputIds, t, L.dataset.eosId);
+    }
+    if (!cancelRequested) {
+      L.dataset.questions.push({ question, prompt, promptTokens, runs });
+      S.composing = false;
+      S.view = { ...S.view, trace: L.dataset.questions.length - 1, stage: STAGE.template, step: 0 };
+    }
+  } catch (err) {
+    L.error = err?.message ?? String(err);
+  }
+  L.status = "ready";
+  L.generation = null;
+  render();
+}
+
+// ─── Listeners ───
+
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-action]");
+  if (!btn || btn.disabled) return;
+  const a = btn.dataset.action;
+  if (a === "back") { stopPlaying(); setView(prevView); }
+  else if (a === "next") { stopPlaying(); setView((v) => nextView(v, trace())); }
+  else if (a === "next-token") { stopPlaying(); setView((v) => nextTokenView(v, trace())); }
+  else if (a === "play") { S.isPlaying = !S.isPlaying; render(); }
+  else if (a === "restart") { stopPlaying(); setView((v) => ({ ...v, stage: STAGE.template, step: 0 })); }
+  else if (a === "goto") {
+    stopPlaying();
+    const index = Number(btn.dataset.index);
+    setView((v) => ({ ...v, stage: index, step: index < STAGE.score ? 0 : index === STAGE.stop ? trace().steps.length - 1 : v.step }));
+  }
+  else if (a === "temp" || a === "run") setTemperature(btn.dataset.temp);
+  else if (a === "ids") { S.showIds = !S.showIds; render(); }
+  else if (a === "live-load") liveLoad();
+  else if (a === "live-ask") liveAsk();
+  else if (a === "live-cancel") { cancelRequested = true; }
+  else if (a === "live-back") { S.composing = false; render(); }
+  else if (a === "live-example") { S.live.question = btn.dataset.q; render(); }
+});
+
+// Typing in the question box only updates the chat mirror (no re-render of the box).
+document.addEventListener("input", (e) => {
+  if (e.target.id !== "live-q") return;
+  S.live.question = e.target.value;
+  renderChat();
+  const ask = el.stage.querySelector('[data-action="live-ask"]');
+  if (ask) ask.disabled = !(S.live.status === "ready" && S.live.question.trim());
+});
+
+// Arrow keys move inside the temperature radio group.
+document.addEventListener("keydown", (e) => {
+  const radio = e.target.closest?.('[role="radio"][data-action="temp"]');
+  if (radio && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
+    e.preventDefault();
+    e.stopPropagation();
+    const temps = data().temperatures.map(String);
+    const i = temps.indexOf(radio.dataset.temp) + (e.key === "ArrowRight" ? 1 : -1);
+    if (i >= 0 && i < temps.length) {
+      setTemperature(temps[i]);
+      el.stage.querySelector(`[role="radio"][data-temp="${temps[i]}"]`)?.focus();
+    }
+    return;
+  }
+  if (showSetup() || e.target.closest("input, textarea, select")) return;
+  if (e.key === "ArrowRight") { stopPlaying(); setView((v) => nextView(v, trace())); }
+  else if (e.key === "ArrowLeft") { stopPlaying(); setView(prevView); }
+  else if (e.key === " " && !e.target.closest("button")) { e.preventDefault(); S.isPlaying = !S.isPlaying; render(); }
+});
+
+el.model.addEventListener("change", () => chooseSource(el.model.value));
+el.question.addEventListener("change", () => chooseQuestion(el.question.value));
+
+// ─── Init ───
+
+render();
+icons();
+addEventListener("load", () => icons());
+checkWebGPU();
+
+// ─── Reveal ───
+const FONT_WAIT_MS = 1500;
+const BRAND_FONTS = ['400 1em Outfit', '700 1em Outfit', '400 1em "IBM Plex Sans"', '600 1em "IBM Plex Sans"', '400 1em "Roboto Mono"'];
+Promise.race([
+  Promise.all(BRAND_FONTS.map((f) => document.fonts.load(f).catch(() => null))),
+  new Promise((r) => setTimeout(r, FONT_WAIT_MS)),
+]).then(() => document.documentElement.classList.add("app-ready"));
+</script>
+</body>
 </html>
