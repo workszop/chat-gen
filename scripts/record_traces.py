@@ -7,18 +7,18 @@ run's temperature and the token that was actually drawn. Temperature 0 means
 
 Usage: python scripts/record_traces.py traces.js
 """
-import glob
 import json
-import os
 import sys
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-M = glob.glob(os.path.expanduser(
-    '~/.cache/huggingface/hub/models--HuggingFaceTB--SmolLM2-135M-Instruct/snapshots/*/'))[0]
-tok = AutoTokenizer.from_pretrained(M)
-model = AutoModelForCausalLM.from_pretrained(M, dtype=torch.float32).eval()
+MODEL_ID = "HuggingFaceTB/SmolLM2-135M-Instruct"
+if len(sys.argv) != 2:
+    sys.exit(__doc__)
+# Uses the Hugging Face cache, and downloads the model on the first run.
+tok = AutoTokenizer.from_pretrained(MODEL_ID)
+model = AutoModelForCausalLM.from_pretrained(MODEL_ID, dtype=torch.float32).eval()
 
 TEMPS = [0, 0.3, 0.7, 1.0, 1.5]
 TOPK = 10
@@ -103,7 +103,7 @@ def record(question, seed):
 
 
 data = {
-    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "model": MODEL_ID,
     "vocabSize": len(tok),
     "temperatures": TEMPS,
     "topK": TOPK,

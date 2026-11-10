@@ -12,235 +12,80 @@
 <title>How a chat writes its answer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=Roboto+Mono:wght@400;500&display=swap">
 <style>
   @keyframes boot-reveal { to { visibility: visible; } }
   html:not(.app-ready) body { visibility: hidden; animation: boot-reveal 0s 4s forwards; }
   @media print { html:not(.app-ready) body { visibility: visible; animation: none; } }
 </style>
 <noscript><style>html:not(.app-ready) body { visibility: visible; animation: none; }</style></noscript>
-<script src="https://cdn.jsdelivr.net/npm/lucide@1.57.0/dist/umd/lucide.min.js"
-  integrity="sha384-Qp5jsYqEgOGiWD8YMQ6yXIycASOePxr9mmbt+Ua0Wu1IScYxo0Pxf7o3Kx6NWJID"
-  crossorigin="anonymous" async></script>
 <style>
-/* ============================================================
-   edulab - Colors & Type foundation
-   Fonts (Outfit, IBM Plex Sans, Roboto Mono) load from Google Fonts
-   via the <link> tags in tokens/head.html - paste that into <head>.
-   No @import here: it chains requests and blocks rendering.
-   ============================================================ */
-
+/* ─── edulab tokens (only the ones this page uses) ─── */
 :root {
-  /* ---- Brand fonts ---- */
   --font-display: 'Outfit', 'IBM Plex Sans', system-ui, sans-serif;
   --font-sans:    'IBM Plex Sans', system-ui, -apple-system, sans-serif;
   --font-mono:    'Roboto Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
-  /* ============================================================
-     RAW COLOR TOKENS
-     ============================================================ */
+  /* Paper: white page, warm stone steps for bands and wells */
+  --paper:    #FFFFFF;   /* page background                               */
+  --paper-2:  #F5F3F0;   /* stone band: card heads                        */
+  --paper-3:  #EAE6E0;   /* deepest stone: wells, bar tracks              */
+  --surface:  #FFFFFF;   /* cards                                         */
 
-  /* Paper - page background is white; the stone steps are bands / wells.
-     Warm neutral grey (no yellow cast) so yellow and the colour blocks stay the
-     loudest thing on the page. Stone v2 (2026-10-10) replaced the cream sand
-     (#FBF7E6 / #F5EDCB), which at 1.07:1 on white did not read as a surface. */
-  --paper:    #FFFFFF;   /* page background (white)                       */
-  --paper-2:  #F5F3F0;   /* stone band: alternating sections, card heads   */
-  --paper-3:  #EAE6E0;   /* deepest stone: wells, table heads, bar tracks  */
-  --surface:  #FFFFFF;   /* cards & sheets                                */
+  /* Ink: warm near-black text and lines */
+  --ink:      #1C1917;   /* primary text                                  */
+  --ink-2:    #44403C;   /* secondary text, 10.3:1 on white               */
+  --ink-3:    #625B53;   /* muted: >= 4.5:1 on every paper step           */
+  --line:     #E0DBD3;   /* hairline dividers                             */
+  --line-2:   #C9C2B7;   /* card contours                                 */
+  --line-strong: #857C69;/* control boundaries: >= 3:1 on paper (WCAG 1.4.11) */
 
-  /* Ink - warm near-black text & lines */
-  --ink:      #1C1917;   /* primary text                                    */
-  --ink-2:    #44403C;   /* secondary text, 10.3:1 on white                 */
-  --ink-3:    #625B53;   /* muted / placeholder: >= 4.5:1 on every paper step */
-  --line:     #E0DBD3;   /* hairline: dividers, table rows, card heads      */
-  --line-2:   #C9C2B7;   /* stronger: card contours, section rules          */
-  --line-strong: #857C69;/* control boundaries (inputs, ghost buttons,
-                            answer options): >= 3:1 on paper steps (WCAG 1.4.11) */
-
-  /* ---- Brand: Yellow main · Blue + Green secondary · Red danger ----
-     Plain saturated colours. The base colour (--blue) is for large fills,
-     illustrations and large text (>= 24px, or 19px bold). "-soft" is the
-     solid fill for chips and panels that carry small text: it is the
-     AA shade (= "-600"), so its "-ink" (white; dark ink on yellow) reaches
-     4.5:1. A colour used AS text goes only on white and uses "-600".
-     Never colour-on-colour (no green text on green).
-     Gate: python3 scripts/check-contrast.py */
-
-  /* Yellow - primary (buttons, progress, values on dark panels) */
+  /* Colour blocks: "-soft" is the solid fill for chips and panels that carry
+     small text, "-ink" the text on it (>= 4.5:1). Never colour-on-colour. */
   --yellow:      #FFD500;
-  --yellow-600:  #F0C800;  /* hover / press          */
-  --yellow-soft: #FFD500;  /* chip / panel fill      */
-  --yellow-ink:  #1C1917;  /* text on yellow         */
+  --yellow-600:  #F0C800;  /* hover / press */
+  --yellow-soft: #FFD500;
+  --yellow-ink:  #1C1917;
+  --blue-soft:   #177AA8;  /* white text 4.8:1 */
+  --blue-ink:    #FFFFFF;
+  --green-soft:  #078342;  /* white text 4.9:1 */
+  --green-ink:   #FFFFFF;
+  --red-soft:    #C92823;  /* white text 5.5:1 */
+  --red-ink:     #FFFFFF;
+  --grape-soft:  #7A5AC2;  /* white text 5.2:1 */
+  --grape-ink:   #FFFFFF;
 
-  /* Blue - secondary (panels, chips, correct / selected state) */
-  --blue:      #1E8FC2;
-  --blue-600:  #177AA8;
-  --blue-soft: #177AA8;   /* = blue-600, white text 4.8:1 */
-  --blue-ink:  #FFFFFF;
-
-  /* Green - secondary support (chips, success) */
-  --green:      #00A651;
-  --green-600:  #078342;  /* hover / press, AA text shade */
-  --green-soft: #078342;  /* = green-600, white text 4.9:1 */
-  --green-ink:  #FFFFFF;
-
-  /* Red - danger / important / wrong (use sparingly) */
-  --red:      #E5322D;
-  --red-600:  #C92823;
-  --red-soft: #C92823;   /* = red-600, white text 5.5:1 */
-  --red-ink:  #FFFFFF;
-
-  /* Grape - 5th category tone (colour-coded groups), from the play palette */
-  --grape:      #7A5AC2;
-  --grape-soft: #7A5AC2;  /* white text 5.2:1 */
-  --grape-ink:  #FFFFFF;
-
-  /* Legacy role aliases - older edulab apps use these names */
-  --marigold: var(--yellow); --marigold-600: var(--yellow-600); --marigold-soft: var(--yellow-soft); --marigold-ink: var(--yellow-ink);
-  --teal:     var(--blue);   --teal-600:     var(--blue-600);   --teal-soft:     var(--blue-soft);   --teal-ink:     var(--blue-ink);
-  --sky:      var(--green);                                     --sky-soft:      var(--green-soft);  --sky-ink:      var(--green-ink);
-  --coral:    var(--red);    --coral-600:    var(--red-600);    --coral-soft:    var(--red-soft);    --coral-ink:    var(--red-ink);
-
-  /* Play palette - subject/category colours in the kids app */
-  --play-sun:    #FFD500;
-  --play-grass:  #00A651;
-  --play-berry:  #C6478B;
-  --play-grape:  #7A5AC2;
-  --play-sky:    #1E8FC2;
-  --play-coral:  #E5322D;
-
-  /* ---- Semantic ---- */
-  --success:      #00A651;  --success-soft: #078342;  --success-ink: #FFFFFF;
-  --warning:      #FFD500;  --warning-soft: #FFD500;  --warning-ink: #1C1917;
-  --danger:       #E5322D;  --danger-soft:  #C92823;  --danger-ink:  #FFFFFF;
-  --info:         #1E8FC2;  --info-soft:    #177AA8;  --info-ink:    #FFFFFF;
-
-  /* ---- Functional aliases ---- */
-  --bg:        var(--paper);
-  --fg:        var(--ink);
-  --fg-muted:  var(--ink-2);
-  --primary:   var(--yellow);
-  --on-primary:#1C1917;      /* dark text on yellow */
-  /* White gap + ink band: >= 3:1 on paper, sand, yellow and every chip fill.
-     Pair with `outline: 3px solid transparent` so forced-colours mode still shows focus. */
+  /* White gap + ink band: >= 3:1 on paper, stone, yellow and every chip fill.
+     Paired with `outline: 3px solid transparent` so forced-colours mode still shows focus. */
   --focus-ring: 0 0 0 2px var(--paper), 0 0 0 5px var(--ink);
-  /* Range-slider track */
-  --track: color-mix(in srgb, var(--ink) 24%, transparent);
 
-  /* ============================================================
-     SPACING  (4pt base)
-     ============================================================ */
-  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
-  --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px;
-  --sp-12: 48px; --sp-16: 64px; --sp-20: 80px; --sp-24: 96px;
-
-  /* ---- Radii (friendly, generous) ---- */
-  /* Page gutter (user decision 2026-11-07): content ~70% of the viewport on wide screens
-     (15% margin each side from ~1280px), never squeezed below 900px, 16-72px on phones/tablets.
-     Every full-width band, header row, page head and footer pads its content with it. */
-  --gutter: max(clamp(16px, 4vw, 72px), min(15vw, calc((100vw - 900px) / 2)));
-  --r-xs: 6px; --r-sm: 10px; --r-md: 14px; --r-lg: 20px; --r-xl: 28px; --r-pill: 999px;
-
-  /* ---- Elevation - warm, low, soft ---- */
+  /* Page gutter: small on phones; desktops give the app 80% of the viewport width. */
+  --gutter: clamp(16px, 4vw, 72px);
+  --r-xs: 6px; --r-sm: 10px; --r-md: 14px; --r-lg: 20px; --r-pill: 999px;
   --shadow-sm: 0 1px 2px rgba(33,30,26,.10), 0 2px 6px rgba(33,30,26,.06);
-  --shadow-md: 0 6px 18px rgba(33,30,26,.12), 0 1px 3px rgba(33,30,26,.08);
-  --shadow-lg: 0 16px 40px rgba(33,30,26,.12), 0 3px 8px rgba(33,30,26,.06);
-  --shadow-primary:  0 8px 22px color-mix(in srgb, var(--yellow) 30%, transparent);
-  --shadow-marigold: var(--shadow-primary);   /* legacy alias */
 
-  /* ============================================================
-     TYPE SCALE (semantic sizes)
-     ============================================================ */
-  --display-font:  clamp(48px, 6vw, 72px);
-  --h1: 44px; --h2: 33px; --h3: 25px; --h4: 19px;
-  --body-lg: 18px; --body: 16px; --body-sm: 14px;
-  --caption: 13px; --overline: 12px;
-}
-
-/* ============================================================
-   SEMANTIC ELEMENT STYLES
-   Apply via element selectors or .edu-prose wrapper.
-   Element defaults are wrapped in :where(.edu) (zero specificity) so any
-   single class wins: <p class="edu-overline">, <p class="edu-small">,
-   <h1 class="app-title"> keep their own font/size instead of the element default.
-   ============================================================ */
-
-.edu-display, :where(.edu) h1.display {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: var(--display-font);
-  line-height: 1.02;
-  letter-spacing: -0.025em;
-  color: var(--ink);
-}
-:where(.edu) h1, .edu-h1 {
-  font-family: var(--font-display);
-  font-weight: 700; font-size: var(--h1);
-  line-height: 1.06; letter-spacing: -0.02em; color: var(--ink);
-}
-:where(.edu) h2, .edu-h2 {
-  font-family: var(--font-display);
-  font-weight: 700; font-size: var(--h2);
-  line-height: 1.12; letter-spacing: -0.015em; color: var(--ink);
-}
-:where(.edu) h3, .edu-h3 {
-  font-family: var(--font-display);
-  font-weight: 700; font-size: var(--h3);
-  line-height: 1.2; letter-spacing: -0.01em; color: var(--ink);
-}
-:where(.edu) h4, .edu-h4 {
-  font-family: var(--font-sans);
-  font-weight: 700; font-size: var(--h4);
-  line-height: 1.3; color: var(--ink);
-}
-:where(.edu) p, .edu-p, .edu-body {
-  font-family: var(--font-sans);
-  font-weight: 400; font-size: var(--body);
-  line-height: 1.6; color: var(--ink-2);
-}
-.edu-body-lg { font-family: var(--font-sans); font-size: var(--body-lg); line-height: 1.6; color: var(--ink-2); }
-.edu-small  { font-family: var(--font-sans); font-size: var(--body-sm); line-height: 1.5; color: var(--ink-2); }
-.edu-caption{ font-family: var(--font-sans); font-size: var(--caption); line-height: 1.45; color: var(--ink-3); }
-
-/* Overline - mono, tracked; functional labels only (never above page/section titles) */
-.edu-overline {
-  font-family: var(--font-mono);
-  font-weight: 500; font-size: var(--overline);
-  letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--ink);
-}
-:where(.edu) code, .edu-mono {
-  font-family: var(--font-mono);
-  font-size: 0.92em; color: var(--ink);
-  background: var(--paper-3); padding: 0.12em 0.4em; border-radius: var(--r-xs);
-}
-
-/* Solid colour blocks (callouts, stat cards, chips): set background: var(--X-soft) and
-   color: var(--X-ink) on the block, add .edu-block, and every heading/paragraph inside
-   inherits that text colour instead of the default ink. */
-.edu-block, .edu-block h1, .edu-block h2, .edu-block h3, .edu-block h4, .edu-block p,
-.edu-block li, .edu-block small { color: inherit; }
-
-body.edu { background: var(--paper); color: var(--ink); font-family: var(--font-sans); }
-
-/* ─── App ─── */
-:root {
-  --tok-special: var(--grape-soft);
   --bar-track: var(--paper-3);
   --chat-bubble-user: var(--paper-3);
   --chat-bubble-bot: var(--paper-2);
 }
-/* The app takes 80% of the viewport width on every desktop size
-   (10% margin each side); phones keep the token's small gutter. */
 @media (min-width: 901px) {
   :root { --gutter: 10vw; }
 }
+
+/* Element defaults, wrapped in :where() (zero specificity) so any single class wins. */
+:where(.edu) :is(h1, h2, h3) { font-family: var(--font-display); font-weight: 700; color: var(--ink); }
+:where(.edu) h1 { font-size: 44px; line-height: 1.06; letter-spacing: -0.02em; }
+:where(.edu) h2 { font-size: 33px; line-height: 1.12; letter-spacing: -0.015em; }
+:where(.edu) h3 { font-size: 25px; line-height: 1.2; letter-spacing: -0.01em; }
+:where(.edu) p { font-family: var(--font-sans); font-weight: 400; font-size: 16px; line-height: 1.6; color: var(--ink-2); }
+
+body.edu { background: var(--paper); color: var(--ink); font-family: var(--font-sans); }
+
+/* ─── App ─── */
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; }
 body.edu { display: flex; flex-direction: column; height: 100dvh; }
-.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 :focus-visible { outline: 3px solid transparent; outline-offset: 2px; box-shadow: var(--focus-ring); }
 button { font: inherit; color: inherit; }
 b, strong { color: var(--ink); font-weight: 600; }
@@ -309,12 +154,12 @@ b, strong { color: var(--ink); font-weight: 600; }
 /* Buttons */
 .btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line-strong); background: transparent; color: var(--ink); border-radius: var(--r-pill); padding: 8px 16px; font-family: var(--font-display); font-weight: 600; font-size: 15px; cursor: pointer; transition: background-color .15s; }
 .btn:hover { background: var(--paper-2); }
-.btn-primary { background: var(--yellow); border-color: var(--yellow); color: var(--on-primary); }
+.btn-primary { background: var(--yellow); border-color: var(--yellow); color: var(--yellow-ink); }
 .btn-primary:hover { background: var(--yellow-600); border-color: var(--yellow-600); }
 .btn-text { border-color: transparent; }
 .btn-sm { padding: 5px 12px; font-size: 14px; }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
-.btn .ic { width: 16px; height: 16px; }
+.btn .ic { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 kbd { font-family: var(--font-mono); font-size: 12px; padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: var(--r-xs); background: var(--surface); color: var(--ink); }
 .kbd-hint { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--ink-2); }
 
@@ -377,11 +222,10 @@ kbd { font-family: var(--font-mono); font-size: 12px; padding: 1px 6px; border: 
 .callout p, .callout h3 { margin: 0; }
 .callout h3 { font-family: var(--font-display); font-size: 20px; }
 .callout p { font-size: 16px; line-height: 1.55; }
+.callout b { color: inherit; }
 .callout-blue { background: var(--blue-soft); color: var(--blue-ink); }
-.callout-blue b { color: inherit; }
 .callout-yellow { background: var(--yellow-soft); color: var(--yellow-ink); }
 .callout-red { background: var(--red-soft); color: var(--red-ink); }
-.callout-red b, .callout-yellow b { color: inherit; }
 
 /* Fields and progress */
 .field { display: flex; flex-direction: column; gap: 8px; }
@@ -445,7 +289,7 @@ kbd { font-family: var(--font-mono); font-size: 12px; padding: 1px 6px; border: 
   .panel-stage { flex: none; }
   .panel-stage .card { height: auto; }
   .panel-stage .scroll { overflow: visible; }
-  .stepper { grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 10px 12px; gap: 4px; }
+  .stepper { padding: 10px 12px; gap: 4px; }
   .step { flex-direction: column; align-items: center; padding: 6px 4px; text-align: center; }
   .step-t small { display: none; }
   .step-t b { font-size: 12px; }
@@ -457,6 +301,14 @@ kbd { font-family: var(--font-mono); font-size: 12px; padding: 1px 6px; border: 
 </style>
 </head>
 <body class="edu">
+<svg style="display:none" aria-hidden="true">
+  <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-skip-forward" viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></symbol>
+  <symbol id="i-rotate-ccw" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></symbol>
+</svg>
 <header class="edu-header"><div class="edu-header-inner">
   <img class="edu-logo" alt="edulab" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPoAAAD6CAYAAACI7Fo9AAAcIElEQVR4Xu1dTXIcR3bOLACUFzMkvRVHYpOSIxyhhaATCDoBwaXDC4InIHQCgScgdAKBO+8EHsCh1gkGs5sIi2CDIrg1OB5HjAmyyi+ru4Hq6qrKn8qsyp8PEfYw1Pnz3vfeVy/z5R9n+AMCQCB6BHj0GkJBIAAEGIgOJwACCSAAoidgZKgIBEB0+AAQSAABED0BI0NFIACiwweAQAIIgOgBG7koitJ+nHP65/zfyz/x30xUq7ezbN+kLdTxBwEQ3R9bNEoiiGdKWteqVT80rvtC+/0QANH74We9dsjkqY4GfP04WTdYIA2C6B4YyueobQOe2PWzgZHrNkB01wg3tJ+y44c8YhnBVax1CaJbg7K5ITh2O8Apf/Acu91a8yC6I8ThxHrA4oOoh5duaRBdFzGUd44APpL2IQbRe2KKSNQTQEl1kN4OviC6IY5wQEPgDKvhg2oI3KIaiK6JHwiuCZjl4sDfDFAQXRE3OJgiUAMWg03UwQbRMUdU9xaUDBYBED1Y00FwIKCOAIhewwrDQXXnQclwEADRw7EVJNVEAB/ta8CSJzqcQZM9gRWHfecGS5rocILAWNtD3NRtnSTRUzd6D76gaqAIJEd0kDxQT7Uodoo+kAzRUzSuRW6gqcARSILoIHngXupQ/FR8I2qip2JEhzxIoukU/CRaoqdgvCRYCCWtIBAd0XGc0YpfJNtIrAEiOqIn66FQ3BoCMZI9GqLHaBxrnouGtBGIzZ+iIbq2JVEBCCggEAvhgyd6LIZQ8DkUAQLGCARLdBDc2OaoaIBA6P4WLNENbIUqQKAXAiGTHUTvZXpUTg2BUMkOoqfmqdC3NwIhkj0YoocIbm+PQgPeIhCaPwZB9NBA9dY7IViyCHhPdJA8Wd+E4hYR8J7oFnVFU0DACQIhBCNviR4CeE68Bo0GiYDv/uol0X0HLUhPhNDOEfDZb70kunOLoAMg4AgBX8kOojsyOJpNFwEfyQ6ip+uP0NwhAr6RHUR3aGw0DQR8QcALovv29fPFOJADCNhCYHSig+S2TIl2fETAF/8eneg+GgcyAYHYEADRY7Mo9AECDQiA6HALIJAAAqMQ3Zd5SwL2hYpAoERgFKIDeyAABIZFAEQfFm/0BgTYGCPaQYk+hoLwKyAABDB0hw8AgVEQGDroDRrRR0EUnQIBTxEYkuyDEH1IhTy1KcQCAqMiMAjRR9UQnQMBjxEYKgg6J/pQinhsS4gGBDoRGIIjzokOGwMBIDA+AiD6+DaABEDA+dq6M6IPMRyBfwABIKCGgDOiq3WPUkAACAyBgBOiI5oPYTr0AQTUEXBCdPXuURIIAIEhELBOdETzIcyGPoCAHgLWia7XPUoDAca+nHz2IM/znYKzbcJjm1LQtxnnU4EN5/z4Jtt8fjKbXaSClYtgaZXoLgRMxbgp6vnF5M6jvCgOWMEmMv0540enr88fy8rF8rttLlkjum3BYjEY9FhHYHsyuf234v1PRcF2dfDhGf/+dHZ+qFMn1LK2+QSih+oJgcotSP6uuPyFhudimK71x7Ps6enszYFWJRQuEbBGdOAJBFQQuHf3jiD5TmNZzn+lYfyMIveMItqTcq5e+dvIsu9+m72ZqvQTQxmbUd0K0W0KFIOBoEMzAvcnfzoo8vyHhl9ffJLd2P/rbDYTv305+dPOxzz/ZaUcfQRenZ03fyAAuBQBK0SX9oICySOwGLK/qkfppnl3U9RPLZovHcZWEO1NdFuCJM+EyACgqPxtVaU8L3YLVuxX/xtl0n+kTPrKf0M0d+MIvYnuRiy0GhIC/zK5s/0xLx4UnO+qJtloffzdTb41qa+PI5q7sXwvoiOauzFKKK3qrIPXdUI0V7eyDZ71Irq6qCgZEwJfTD7bzYuPz1Q2urTp3TTnRjR35yUgujtso2z5/ud3ntXn2iaK1okuhv8f8uLPtUz7xSd865tlNt6kn1jq9I3qIHosnuBYD6WNLpyd8YIfs4zNMsZPliLlrNgu8uJZVcQ60RuTcKIC5xc0nz+gjTI/OlYx6uZB9KjNa0c5Ocn580+yrYOmyNs2j28Zup9QMu/rRqnpkAtF98cpR/c+UR1Et8OFqFuhufOfW7LpKxtdqiDIEnWbGf/mv2bnV1Ff1C33wOeXBzQ1eNJC9qSj++BE79Nh1IyIULm23WxNWXOhvlKijvO/0C631r3u5TC+yI8o2Xe3CVLsedd3NER0fcySqdGYICPts4w/fjk7P6oCsRje/9y6j/2qMH9+K9val50vl0X3LNt4+HL2+3EyxlgoahpkQfTUPEVD3+YhO3/+6vX5XgPJJSfS2ufxXSK1RndK0m1y9l19+K+hXpBFByO6aUdBopqw0OUQPP/48woEDQdL+iTqVOFd9DFdS9RxfnKLb30nGx2o9hNzOUT0mK3bQ7d7n38qhsUPqk00Zcrv3/3058YLJOijQFnyPVtZ8vllFZfi+Oqtqkycs+PTs7cPe6gaXFWTYAuiB2dm9wL/62Qy+b/8/ataTy9evX67ciNM29q3q5tg2nIGSM7JfQJEl2OUXIn7kzv79Q0uTcmvpi2rTYk6mwDSst0enYT7qd5mqsk5VWy1iG4yZFAVBOX8QYC2uR5W17LFSbPTs/OV214ao/5Al0Pc+/zOEWPFo1r+IMnknKrXaBFdtVGUCxsBitQi8XV9nryBwE2RdcioSjKu76JLKDmnG3SVia7bcNiunrb0lIgrVhJeDZcyNkVVmsMr+1NfhFNPzunycTDD9DUs6g+HwDrR169ZVon6JhJ/9dVXf/jH/178+0rdDf6fL1+++a3eHpJz6giD6OpYJVGyKZPefADlU7r/rfrwwvpGGhPA7t+//3nx4R9n1bpZxv7t5eztfzS1h+ScGsoguhpOyZRSJrrC8N4ENF2iiz6QnJMjDaLLMUqqRFOEvJXd+Ofq7rOmjLutZTUTopdkTzA5pzNPVyK6ToNJsSJCZZtOq9WTbKpR3wQeU6KnnpyTYQ2iyxCi34UT/Z19+Fq8+Elv22wXjNOacjG5mqNyNqOrUGacFRf0306yLJvSiyK/KjTtXZE60ZvW0JuiPj3AcM/Wdlci+8o219PT03cqQCE5146SEtFVQI6tjCD3/7DLBzSa2dV9DHCJhdiHLZ79pSOdz0PBRyWbrhL1x9IXyblm5EH0Gi7zc9Dvn9Ad5fv1V0WMnVfce1YUhzezGz/6ftJKhehryS+6K+7V2duJMT6WKyI5tw4oiF7BZH79ETu0RvA63kT4jLN9nyP8vbury2ZNN8mofAwsc1e7uVSSc6r5MynRVRvStoRHFdRvRyGh6Rok+v8XQnwalk/F/xJGOwt1brdebljRVwzpb/Ibj32M7kq74mofA0Ji7TKKsc1b2jR//9/r39r0jrWWviozSOxELxM4BRO3o6wc2qjh8oKWj4632NZUlnASS0/v2eUunf4S5F85z73Spqc3pCjtinO0hi7zRdnvX04+e0AJ092CEqZdT0OleKxVSnQZuCH/XiZuCkYvjrSRXO1+szYM5uvNlwdrJ62WFYjsG5w/9OXNb5VlM5dr6Ca+JGSmY6uP6LTdnk79IQ/g6MjlqmyyRG/Lzi6Abr3G2MQQC3IctkV4W5tNTGSr1lEhukqZvnKo1J/fJUePQhRF622yne3QRzalV2CSJHoXyV2Sbqx+VYgjyqjsinO9hi6TtfxoFpc/yW+blbUk5q3rzzbLa4VZIjmit5FNbAzZ4GzH9a2i5VCzKI7rd5+F6T5zqYc6nkrr90+KPBcjo+4/Oj/PaeMSzcWnYhPTJtuc/RMlUNfunBvoogyZuEP8nhTRxyb50qDle+IFm0ZB9gHW0JVWRYi0tHR59Ee2ddy2mhHCsqAJ6VUS5skQ3SbJ55n1Dw9YTo8H8vlRTYogM5bxkxts84UsMy/KR0N2zai4eJjhmcCNEpFPZYlI6XXS1D+1cyBrR2AeK9FVPg5JEH0xrxPvh60soekO10uC55c/SDO8tL6u4sRRkF2T6PVHIbpyIp1LnzSS2ODZngrBl0QA0Vs+CSpDApWvydhl2q4l1km8yZfi1rWkr+jB6eu3T7v0X+yp36WDMuXIYPlXbsKp3tsmRg10pdPYWBZFvrfyJpou0Wtr8EKfjieeWl5/MVv2BNEjJ3oZiYvLk7U5seKmFclSXCf3KLN7dPr6/LEuQX09ONKXLPUNOUtcqmTvGq7rfJzrmPeVXdeGPpXvHLrHEtEF4K1klZBdSnKKaKJ9AnK7LblmQvbUiF6N7HTd9E9N06M+JBftg+g+fXocyqJL9q4EHu1XF4dTjqriLjZxiEMxX9fV0CV7ikSffzD5kQuSg+gOieVj06pk7yj3F3rYb6dtCWd+mOKS1nprDwwsnFh1GJ8q0Zt8xtbe9Jgjumz0nUTWve48MrLnNAxvevZHnFzrInm1n8Yz0RpkB9EXaGom+7qCS8xElwXVJIkum7M3HnLRIPkS9Dayb2b8G9kOvFSILrah0pq6WGFYn+7QbsWbfGti6zgviC77HET6uzTRttTbgORdZFcZiiZDdFoyvMk2D98Vl+vvnxOIfRNwSzss1uTFHvnrQzAWRwtjUwRDd4kFpGTvQfJrssufOKqLmRLRT2dvDhZLatbIXm5GYvxbVuQ7tEdBjBjW7xsA0cf+Pg3bv2niTVVKlVtbUie60L8P2ZWIvW6wtTffVW3qWzlEdEWLrJHdQiS3HdHrDykoqma1mMlHazVJ2T26USW7IbFXsEjp8olkk3FN3r9wnl1aGru4ybaOrCWBDK5e+mLy2W6ef/y5KifP1h87tMpi6TSnv0wqH4oustPKx1QEf9MLPMX5Bop+UyL50cvZ78dD4jdmXyD6AOirOHddjMbLDRW37LpQqe2Aie7DDapYdJJdQ8ElsekjOd1gbCpb7dBo2quiGLp7YA5V566L2rEWfyguqxxKNdpTIC5cpMMs9YSW/u2vOliYkD0VYtdtD6IPxYaOfnScu9pM23tiHqgkrrp+d4NvbaucvdeZozeObFqW3kTZVIkNovvAgpoMpkQXzfh6Zt00kWWCxSKyH4tjuyC2mYNjjm6Gm1YtE+eudjCfHxfk6OyuVscOCute1rE+HdHfU+BAjeiaxNDdA5P2JbpQoRzGsw/7axc/DKUf3ejCeXYkdrH1WY2wgcVQKsfUDyL6ANa07dwiws+fbh7mT9ykaitbbRuLYRAIvxcQfQAbwrmvQQYWAzhcQxfJ3DAzDrzzXuHcIPqY/if6RkQfwAIgOog+gJt1doGIPoAFQHQQfQA3Myf62MLF0j+IDqKP7csYug9gARAdRB/AzRDRxwYZRAfRXfqgbLMMknEu0a+0PRbR6frpb+nq5EmRFxMhTsHpppXFX/lWHCvovbjsImPshF4cPdPdt24C31hYmMgaSh0Q3RNLDeXc5b74nD1aXLZ4fTeaKg6czXjB6ax2dvzb7PcXqtV0yg2FhY5MKZSVztFVvhYpANVHR5fOPX+d9P2T+THS+cuuVv7o7DtF/eMb2dZTm5HeJRZW9I60ESnRI9V7ULVcOPfi+eEfms+JW1ZP8XVYlV5dYKHSb+plQPQBPMC2c9MNsU9opHWgdZ0S3YFHql6sqFt7rVUGhXgu6Wa29T0OtciQ8u93EH0Am9gi+uKd959X7iZvkp9ITcPuKd0fP91iGyddQ28xMvg7+7BNr9PsND3VvNY8Dekznj02vW/NFhYDmC2ILlSn1iC6BXMKAn5kl7fbTnjZcG7Z++zinDjN0Y82MnbU56TZ8r32vGD7Ta+nLOGi6H5I0f2pbnRXxUKGqQWzRdEEiD6QGVeuiaa5LL3N9rDu/KrO3Sby/c8//aFg7KA5ePN34mXXP7KtY13SySBavA4rpgjfNpbl/IT0/U6nXxUs6NnkZ7QsuF/22YKpTHb8voqAUkRX/WqkBm7jww8Nzq/i3O0kb34rvOQAvVtGUfVAh2gmNhJ6FgU7bHz/XZPsMiwa30bX7MNEx9jrgOiGFu58yonWozc5f7gcQsucW5fkYpiecb772+zN1FB87WrVe9sa5u3Kkb0Li0aSX80V9EcP2kpGXEGJ6BHrb6Sa9L22+ZDzYoPILshoQvRWp7f4goyJ8iTXIQ2rn5iSvQmLxSOLvygkGZU/KCa6hVZHZ6QNomtaV4nklTbFa6D1t9Zlr6m2Rzb+/Fa2te96qC6DpOOtOikR60Snvl7QHORr5c0+GMZfmccJ0XUalTlKqL93PcZICbEjctaDxnlsTeEuoneR/NXr8z1fsDMlewPRW1Tiz+c/FI9MRw++YOWDHIjoilZQeXFV9Q72NqKHQvIlZCZkVyF69Y25ttdqaGokHT0omjaJYiC6gpmbHjwsqzXMl1WeEWoiemgkNyV7F9FFkpGulN6rb8ZpfZqKs+PTs7cPFUyYfBEQXcEFyDnFO2cPVopSso3WkO81zZcXDyQerdVZNkDRaJOzx8usfKgk1yH71d785fp4HXe6N55WKnY7Nh2t24DaePX6bZI+rDuVThIkBW6vFKG95QdFnv+w7pvde7/vT+7s01nwZ239id1l9NttymLvrZfRf8BQVy+b5buG8Rlnh7TT7rBjb/4Levt9ry3J2N42O3t19nZiU49Y29Iiuu5XJBbQJO91d84VF88NU6Ku+Fodj7BILo3sLYq3DdWrxVd2yVV+6Ps0lLot/CtpwkMtovun8rAStSeGVjfINEnVNioIPZLX5VdefuT810/41l7bgZvFUF9shV0f7UiG+cN6xfC9gegDYN6RBb7aINMmxmLvuBjCtkf3+YUP4nDK8z6HUwaAYqWLxdtwj+htODoM034BRnn4hrOD09m5mLY0/i1GUM0baEbeMDQ0rk39gegDWaErOot59+nr8++7RJmfRBPnySWvo1LSTsxv6cDKi7E3yXR9vGhD0KPmPMNqLbHaIHuksVzhKPKfGufzILmxh2Pobghd91731ax6UxfL11HJoemF1OJWpxiLa514xqY+kF5cOknk3i14sau2o40//4QO38jOxf8tv2weqpfghJm3MHSv1mom0bxEz0QQ085M+vK5jhiKU2Q+biMqRbD909mbH7t00CL8siGK9Jz6pUscp7SX/lfXGImz4e/ZhwesyOlyCrar3h9/vpHxI9nhm/mURkTx5iG/bMuwujzplgTRe9q+81RX+SnlU0o6PZZdsHh94YPCkL4usyC+uLq5YCdZtkH/zs9M5veC0B/Yh7t5nu+Q4BO6j25CIw76t/rf8gIMulTyUEVniuJ01n5x9rzWzRin9NQ1DaukEdHDUnEYaWVZdZ0bWRY78fZI8tVNOqaq0IeAqq7eF7dsS5PIrSKI66tov/9NtnWkkk+gqc+jPmvrplCEXK/PSBpEt2j5+Zp5cdyaZCvn2gUl694+Ven2KsrTfNga6VU6Vi2zIPcNut1GFr2XTcqG6eUgKOPfd2XlVcVDuWsEjIne5+sSswHm218vaemo4dTVUnG6mIIujjh4OTtfnNCSI3JNerbDOA2nZRl7eZPaJcRQmuxOl07yqQ65RUeLjUPPOqcC9OGgrcF7JtMObWUCq9CXb8ZEDwynwcVVWzOnl1F4dkhLTs9VhrtVJebE/7hDW3N3aC69TYbclmbvdVGgTS30QZlllO0XzzaZEPDLyWcPKNEmLprcaeteZW1dV3SUX0UARHfsEZ33rV1F+PkmGUpg/ag6BG4TW0TOgvHb4vrmZZny7TWRWGv4I5JNrwcaZVLv4g9s80T3w7P+Ebp8sNgr0Nhvpc9B7r1zbGbvmwfRBzDRYjvnQeMVTLX+KaF1TOQ79mG9XBcaEb0pY0/r67QEVxS3O+vTaIGG6fsmowRduUIv33fYLvQH0Qf0gvIBhvzyoHP+XpEnBNJrkbv0OP4r3aV3IFtbH9AsSXTVm+g2vjZJIF1RcrEBhR5FVNgVdz28n1LGXrx0Osgmma6pwUfGv2V5sa0Uua8aUts8k5ovyPS1xa/eRJcJit/bEVjuiqODIOIl1LtaWNHcmub1tEEmm9II4cLFDrnFfP9WuYGGEn4096dsv2RIvqaEfPurlt6JFQbRIzP4fJNMvkvD9V3j7Dmt0xMstD2WzYj89H/zP7FbTnwMmiCb74K7GjbcFhl8Kks74tpPoEmhp+E5HcY5cvF6jLRvFGhEABHdQ8dYHJjxc5NMG14Gm2c8hD5akawR3dYQI1qkDRRb3SRDkVbrlhqDDjWq9Nk8o9ENilpCwBrRLcmDZjoQqG2SEfNljeupekJLt7qwgvICGTvZYGyKZbGeeA5c3SrREdUHth51t7JBJi+qc2y95B61VUZpmuOL3XC0zXVGB3HKDTRYChverrZ7tEp028KhPXsILD8I1Rb77oCzJx1aqiLgImBaJ7oLIeEGQAAI9EPAOtH7iYPaQCBtBFwFSidEdyVs2i4A7YGAOQJOiG4uDmoCgXQRcBkgnRHdpdDpugI0jxUB13xxRnRhENfCx2p06AUEbCPglOi2hUV7QCBGBIYIiM6JPoQSMRofOgEBmwg4J7pNYdEWEIgNgaEC4SBEH0qZ2JwA+sSNwJC8GIToSMzF7bDQzn8EBiO6/1BAQiAQLwKDEn3IoUq8JoNmoSMwBg8GJTqG8KG7KOQPFYHBiQ6yh+oqkNsGAmNEcyH3KES3ARjaAAKhITAWyUH00DwF8gaLwJgkH53oYysfrNdAcCCgicDoQ3eQXdNiKA4EDBAYnegGMqMKEAgGAV8CmRdE9wWMYLwHggaBgE9+7QXRseQWhN9CyIAR8IboIHvAXgTRvUfAK6KD7N77CwQMFAHviA6yB+pJENtrBLwkOsjutc9AuBYEfEq+1UX0luggO/gUEgI+k1zg6DXRQzI0ZAUCPiMAovtsHcjmPQK+R/IlgCC6964EAX1FIBSSBzd0DwlYX50TcqWJQHARHWRP01GhdT8EgiM6svH9DI7a/RAINdAESXSQvZ+zorYZAqGSPLg5et08IQNv5mqoNQYCMfhZsBF9DIOjTyAQKgIgeqiWg9zOEYghkke5jh6TYZx7MTpICoHoIjrInpT/OlE2Rh+KjuhOLI9Gk0AgRoJHOXRPwhuhpBMEYiZ58MtrKhaP3YAqGKBMOwKp+AeG7mBBsgikQvIkInrVi1MybLLsVVQ8NV9ARFd0DBSLA4HUCJ58Mi5Vg8dBVzMtUrY5IrqZz6BWQAikTPDkIzrm7gEx1VBUQfAyEcV5YdhENNUQ0SumxJc/Dr+GHdftCKLXMEEUiIPs0GIVARC9xSNA+LCogijebS8QXeLPcCC/CQ/7qNkHRFfDicGhFIEaqBjsoQc0iK6HV0l4ZHI1QbNUHNibAwmim2OHmgMhAIL3BxpE748hWnCAAMhtF1QQ3S6eZWuYPzoAFU32QgBE7wUfKttAANHbBopYXnOPokIPiPKrIAEPBaexWAQR3SKYaKodAUTtcb0DRB8X/6s5vfhHTIcvQGwPHKsiAojulz2upAmNKKHJ66nZnYkFojuD1n7Dy3ntWPPbar9jyWAf1TRaBNEjtnP9w1CNust/xzZliNicvVQD0XvBh8pAIAwEQPQw7AQpgUAvBED0XvChMhAIAwEQPQw7QUog0AsBEL0XfKgMBMJAAEQPw06QEgj0QgBE7wUfKgOBMBD4f4fKYfp9jVxvAAAAEGRlQkcxNTk4NUQ2OTcwRjYzNDExig0y6AAAAABJRU5ErkJggg==">
   <span class="edu-wordmark">edulab</span>
@@ -489,11 +341,11 @@ kbd { font-family: var(--font-mono); font-size: 12px; padding: 1px 6px; border: 
         <ol class="stepper" id="stepper" aria-label="Stages of text generation"></ol>
         <div class="card-body scroll" id="stage"></div>
         <div class="card-foot" id="controls">
-          <button class="btn" data-action="back"><i data-lucide="chevron-left" class="ic" aria-hidden="true"></i>Back</button>
-          <button class="btn btn-primary" data-action="next"><i data-lucide="chevron-right" class="ic" aria-hidden="true"></i>Next step</button>
-          <button class="btn" data-action="next-token"><i data-lucide="skip-forward" class="ic" aria-hidden="true"></i>Next token</button>
+          <button class="btn" data-action="back"><svg class="ic" aria-hidden="true"><use href="#i-chevron-left"/></svg>Back</button>
+          <button class="btn btn-primary" data-action="next"><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"/></svg>Next step</button>
+          <button class="btn" data-action="next-token"><svg class="ic" aria-hidden="true"><use href="#i-skip-forward"/></svg>Next token</button>
           <button class="btn" data-action="play" id="play-btn">Play</button>
-          <button class="btn btn-text" data-action="restart"><i data-lucide="rotate-ccw" class="ic" aria-hidden="true"></i>Start over</button>
+          <button class="btn btn-text" data-action="restart"><svg class="ic" aria-hidden="true"><use href="#i-rotate-ccw"/></svg>Start over</button>
           <span class="grow"></span>
           <span class="kbd-hint"><kbd>←</kbd><kbd>→</kbd> step, <kbd>space</kbd> play</span>
         </div>
@@ -598,6 +450,7 @@ let liveTok = null;
 let liveModel = null;
 let cancelRequested = false;
 let renderQueued = false;
+let pickerHtml = ""; // options currently in the question picker
 
 // ─── DOM refs ───
 
@@ -623,13 +476,20 @@ const liveCount = () => S.live.dataset?.questions.length ?? 0;
 const data = () => (S.source === "live" && liveCount() > 0 ? S.live.dataset : DATA);
 const showSetup = () => S.source === "live" && (S.composing || liveCount() === 0);
 
-function getTrace(d, i, t) {
-  const q = d.questions[i];
-  return { question: q.question, prompt: q.prompt, promptTokens: q.promptTokens, eosId: d.eosId, ...q.runs[t] };
+/** The run on screen: one question at one temperature. */
+function trace() {
+  const d = data();
+  const q = d.questions[S.view.trace];
+  return { question: q.question, promptTokens: q.promptTokens, eosId: d.eosId, ...q.runs[S.view.temp] };
 }
-const trace = () => getTrace(data(), S.view.trace, S.view.temp);
 const modelName = (d) => d.model.split("/").pop();
 const isEos = (t, eosId) => t.id === eosId;
+/** Generated steps that add text, i.e. all but the end-of-turn token. */
+const textSteps = (tr, count = tr.steps.length) => tr.steps.slice(0, count).filter((s) => !isEos(s.chosen, tr.eosId));
+/** Chip colour for the text of a turn. */
+const contentPart = (role) => (role === "system" || role === "user" ? role : "answer");
+/** Chip label, with the token number when "Show token numbers" is on. */
+const withId = (t, text) => (S.showIds && t.id !== undefined ? `${text} · ${t.id}` : text);
 
 /** Token text for display: new lines show as ↵, spaces are left unmarked. */
 const visible = (text) => text.replace(/\n/g, "↵").trim() || "(space)";
@@ -693,7 +553,7 @@ function classifyPrompt(tokens) {
       continue;
     }
     if (mode === "content") {
-      parts.push(role === "system" ? "system" : role === "user" ? "user" : "answer");
+      parts.push(contentPart(role));
       continue;
     }
     parts.push("special"); // the "\n" between turns belongs to the template
@@ -707,7 +567,7 @@ function classifyPrompt(tokens) {
  * the text before that marker becomes "thinking" once the marker appears.
  */
 function answerParts(tr, count) {
-  const steps = tr.steps.slice(0, count).filter((s) => !isEos(s.chosen, tr.eosId));
+  const steps = textSteps(tr, count);
   const cut = steps.findIndex((s) => s.chosen.text === END_THINK);
   const join = (xs) => xs.map((s) => s.delta).join("");
   if (cut === -1) return { thinking: null, answer: join(steps) };
@@ -762,17 +622,12 @@ function shownCount(v, tr) {
 
 // ─── Render: small pieces ───
 
-function icons(root = document) {
-  if (window.lucide) window.lucide.createIcons({ root });
-}
-
 function chip(text, cls, title, size = "") {
   return `<span class="tok tok-${cls}${size ? ` tok-${size}` : ""}"${title ? ` title="${esc(title)}"` : ""}>${esc(text)}</span>`;
 }
 
 function tokenChip(t, part, size) {
-  const label = S.showIds && t.id !== undefined ? `${visible(t.text)} · ${t.id}` : visible(t.text);
-  return chip(label, part, PART_LABEL[part], size);
+  return chip(withId(t, visible(t.text)), part, PART_LABEL[part], size);
 }
 
 function legend(parts) {
@@ -783,11 +638,11 @@ function legend(parts) {
 function markers(tokens, role, asTokens) {
   return tokens
     .map((t) => {
-      const label = S.showIds ? `${visible(t.text)} · ${t.id}` : visible(t.text);
-      if (SPECIAL.has(t.text)) return chip(S.showIds ? `${t.text} · ${t.id}` : t.text, "special", PART_LABEL.special, "sm");
-      if (!asTokens && !t.text.trim()) return "";
-      const isNewline = t.text.includes("\n") && !t.text.trim();
-      return chip(label, isNewline ? "special" : "role", t.text.trim() ? `Role name: ${role}` : "New line", "sm");
+      if (SPECIAL.has(t.text)) return chip(withId(t, t.text), "special", PART_LABEL.special, "sm");
+      const blank = !t.text.trim();
+      if (blank && !asTokens) return "";
+      const isNewline = blank && t.text.includes("\n");
+      return chip(withId(t, visible(t.text)), isNewline ? "special" : "role", blank ? "New line" : `Role name: ${role}`, "sm");
     })
     .join("");
 }
@@ -796,7 +651,6 @@ function markers(tokens, role, asTokens) {
 function templateView(tr, asTokens) {
   const turns = splitTurns(tr.promptTokens);
   const lead = leadingTokens(tr.promptTokens);
-  const content = (role) => (role === "system" ? "system" : role === "user" ? "user" : "answer");
   const leadRow = lead.length
     ? `<div class="tokens">${markers(lead, "", asTokens)}<span class="turn-note">start of the whole text</span></div>`
     : "";
@@ -809,7 +663,7 @@ function templateView(tr, asTokens) {
           markers(turn.header.slice(1).filter((t) => SPECIAL.has(t.text)), turn.role, false);
       const body = turn.content.length
         ? asTokens
-          ? `<div class="tokens">${turn.content.map((t) => tokenChip(t, content(turn.role), "lg")).join("")}</div>`
+          ? `<div class="tokens">${turn.content.map((t) => tokenChip(t, contentPart(turn.role), "lg")).join("")}</div>`
           : `<p class="txt big">${esc(turn.content.map((t) => t.text).join(""))}</p>`
         : "";
       const empty = turn.role === "assistant"
@@ -827,14 +681,11 @@ function contextStrip(tr, upto, withSlot) {
   const parts = classifyPrompt(tr.promptTokens);
   const all = [
     ...tr.promptTokens.map((t, i) => ({ text: t.text, part: parts[i] })),
-    ...tr.steps
-      .slice(0, upto)
-      .filter((s) => !isEos(s.chosen, tr.eosId))
-      .map((s) => ({ text: s.chosen.text, part: SPECIAL.has(s.chosen.text) ? "special" : "answer" })),
+    ...textSteps(tr, upto).map((s) => ({ text: s.chosen.text, part: SPECIAL.has(s.chosen.text) ? "special" : "answer" })),
   ];
   const shown = all.slice(-CONTEXT_TAIL);
   return `<div class="tokens"><span class="note">… ${all.length - shown.length} earlier tokens</span>` +
-    shown.map((t) => tokenChip({ text: t.text }, t.part, "")).join("") +
+    shown.map((t) => tokenChip(t, t.part)).join("") +
     (withSlot ? chip("next token", "next", "The next token, not chosen yet") : "") +
     `</div>`;
 }
@@ -938,7 +789,7 @@ function stageBody() {
 
   // Stop
   const eosStep = tr.steps.find((x) => isEos(x.chosen, tr.eosId));
-  const generated = tr.steps.filter((x) => !isEos(x.chosen, tr.eosId)).length;
+  const generated = textSteps(tr).length;
   const notTop = tr.steps.filter((x) => x.rank !== 1).length;
   const head = tr.finished
     ? `This time the model picked the special <b>end-of-turn</b> token ${chip(eosStep?.chosen.text ?? "<|im_end|>", "special")}${eosStep ? ` (${formatPercent(eosStep.chosenProb[v.temp])} chance)` : ""}. The app stops asking for more and does not show that marker. The answer is done.`
@@ -1030,7 +881,8 @@ function renderPickers() {
   const qs = setup && liveCount() === 0 ? [] : data().questions;
   const opts = qs.map((q, i) => `<option value="${i}">${esc(q.question)}</option>`);
   if (S.source === "live") opts.push(`<option value="new">Ask your own question…</option>`);
-  el.question.innerHTML = opts.join("");
+  const html = opts.join("");
+  if (html !== pickerHtml) el.question.innerHTML = pickerHtml = html;
   el.question.value = setup ? "new" : String(S.view.trace);
 }
 
@@ -1100,8 +952,7 @@ function renderStage() {
   set("next", atEnd);
   set("next-token", atEnd);
   set("play", atEnd);
-  el.play.innerHTML = `<i data-lucide="${S.isPlaying ? "pause" : "play"}" class="ic" aria-hidden="true"></i>${S.isPlaying ? "Pause" : "Play"}`;
-  icons(el.controls);
+  el.play.innerHTML = `<svg class="ic" aria-hidden="true"><use href="#i-${S.isPlaying ? "pause" : "play"}"/></svg>${S.isPlaying ? "Pause" : "Play"}`;
 }
 
 function render() {
@@ -1132,25 +983,25 @@ function setView(fn) {
   render();
 }
 
-function stopPlaying() {
+/** Any manual navigation pauses Play. */
+function go(fn) {
   S.isPlaying = false;
+  setView(fn);
 }
 
 function schedulePlay() {
   clearTimeout(playTimer);
-  if (!S.isPlaying || showSetup()) return;
-  if (S.view.stage === STAGE.stop) { S.isPlaying = false; return; }
+  if (!S.isPlaying) return;
   playTimer = setTimeout(() => setView((v) => nextTokenView(v, trace())), PLAY_INTERVAL_MS);
 }
 
 function setTemperature(t) {
-  stopPlaying();
   // A different temperature is a different run: restart the answer.
-  setView((v) => ({ ...v, temp: t, stage: v.stage >= STAGE.score ? STAGE.score : v.stage, step: 0 }));
+  go((v) => ({ ...v, temp: t, stage: v.stage >= STAGE.score ? STAGE.score : v.stage, step: 0 }));
 }
 
 function chooseSource(src) {
-  stopPlaying();
+  S.isPlaying = false;
   S.source = src;
   S.composing = false;
   S.view = { ...S.view, stage: STAGE.template, step: 0, trace: src === "live" ? Math.max(0, liveCount() - 1) : 0 };
@@ -1158,10 +1009,9 @@ function chooseSource(src) {
 }
 
 function chooseQuestion(value) {
-  stopPlaying();
-  if (value === "new") { S.composing = true; render(); return; }
-  S.composing = false;
-  setView((v) => ({ ...v, trace: Number(value), stage: STAGE.template, step: 0 }));
+  S.composing = value === "new";
+  if (S.composing) { S.isPlaying = false; render(); return; }
+  go((v) => ({ ...v, trace: Number(value), stage: STAGE.template, step: 0 }));
 }
 
 // ─── Live model ───
@@ -1278,16 +1128,16 @@ async function liveRun(inputIds, t, eosId) {
 
   class Recorder extends tf.LogitsProcessor {
     _call(_ids, logits) {
-      const dataArr = logits[0].data;
-      const scores = Float32Array.from(dataArr);
+      const scores = logits[0].data; // read here, overwritten below
       const cand = topK(scores, LIVE_TOPK);
       const p = chances(scores, t);
       const chosen = t === 0 ? cand[0] : draw(p, rand);
       chosenIds.push(chosen);
       // What this token adds to the visible text (complete characters only).
       const clean = decode(chosenIds, true).replace(/�+$/, "");
-      const delta = clean.startsWith(shown) ? clean.slice(shown.length) : "";
-      if (clean.startsWith(shown)) shown = clean;
+      const grows = clean.startsWith(shown);
+      const delta = grows ? clean.slice(shown.length) : "";
+      if (grows) shown = clean;
       const rank = cand.indexOf(chosen);
       steps.push({
         candidates: cand.map((id) => ({ id, text: decode([id], false) })),
@@ -1300,8 +1150,8 @@ async function liveRun(inputIds, t, eosId) {
       S.live.generation = { temperature: t, step: steps.length, answer: shown };
       queueRender();
       const force = cancelRequested ? eosId : chosen;
-      dataArr.fill(-Infinity);
-      dataArr[force] = 0;
+      scores.fill(-Infinity);
+      scores[force] = 0;
       return logits;
     }
   }
@@ -1321,8 +1171,6 @@ async function liveRun(inputIds, t, eosId) {
     steps,
     answer: decode(chosenIds, true),
     finished: chosenIds.at(-1) === eosId,
-    seed: LIVE_SEED,
-    sampleTemperature: t,
   };
 }
 
@@ -1349,8 +1197,12 @@ async function liveAsk() {
     }
     if (!cancelRequested) {
       L.dataset.questions.push({ question, prompt, promptTokens, runs });
-      S.composing = false;
-      S.view = { ...S.view, trace: L.dataset.questions.length - 1, stage: STAGE.template, step: 0 };
+      // Show the new answer, unless the user went back to the recorded model meanwhile.
+      if (S.source === "live") {
+        S.composing = false;
+        S.isPlaying = false;
+        S.view = { ...S.view, trace: L.dataset.questions.length - 1, stage: STAGE.template, step: 0 };
+      }
     }
   } catch (err) {
     L.error = err?.message ?? String(err);
@@ -1366,15 +1218,14 @@ document.addEventListener("click", (e) => {
   const btn = e.target.closest("[data-action]");
   if (!btn || btn.disabled) return;
   const a = btn.dataset.action;
-  if (a === "back") { stopPlaying(); setView(prevView); }
-  else if (a === "next") { stopPlaying(); setView((v) => nextView(v, trace())); }
-  else if (a === "next-token") { stopPlaying(); setView((v) => nextTokenView(v, trace())); }
+  if (a === "back") go(prevView);
+  else if (a === "next") go((v) => nextView(v, trace()));
+  else if (a === "next-token") go((v) => nextTokenView(v, trace()));
   else if (a === "play") { S.isPlaying = !S.isPlaying; render(); }
-  else if (a === "restart") { stopPlaying(); setView((v) => ({ ...v, stage: STAGE.template, step: 0 })); }
+  else if (a === "restart") go((v) => ({ ...v, stage: STAGE.template, step: 0 }));
   else if (a === "goto") {
-    stopPlaying();
     const index = Number(btn.dataset.index);
-    setView((v) => ({ ...v, stage: index, step: index < STAGE.score ? 0 : index === STAGE.stop ? trace().steps.length - 1 : v.step }));
+    go((v) => ({ ...v, stage: index, step: index < STAGE.score ? 0 : index === STAGE.stop ? trace().steps.length - 1 : v.step }));
   }
   else if (a === "temp" || a === "run") setTemperature(btn.dataset.temp);
   else if (a === "ids") { S.showIds = !S.showIds; render(); }
@@ -1408,9 +1259,11 @@ document.addEventListener("keydown", (e) => {
     }
     return;
   }
+  // Leave browser shortcuts alone (Alt+← is "back", ⌘+← is "home").
+  if (e.altKey || e.ctrlKey || e.metaKey) return;
   if (showSetup() || e.target.closest("input, textarea, select")) return;
-  if (e.key === "ArrowRight") { stopPlaying(); setView((v) => nextView(v, trace())); }
-  else if (e.key === "ArrowLeft") { stopPlaying(); setView(prevView); }
+  if (e.key === "ArrowRight") go((v) => nextView(v, trace()));
+  else if (e.key === "ArrowLeft") go(prevView);
   else if (e.key === " " && !e.target.closest("button")) { e.preventDefault(); S.isPlaying = !S.isPlaying; render(); }
 });
 
@@ -1420,13 +1273,11 @@ el.question.addEventListener("change", () => chooseQuestion(el.question.value));
 // ─── Init ───
 
 render();
-icons();
-addEventListener("load", () => icons());
 checkWebGPU();
 
 // ─── Reveal ───
 const FONT_WAIT_MS = 1500;
-const BRAND_FONTS = ['400 1em Outfit', '700 1em Outfit', '400 1em "IBM Plex Sans"', '600 1em "IBM Plex Sans"', '400 1em "Roboto Mono"'];
+const BRAND_FONTS = ['700 1em Outfit', '400 1em "IBM Plex Sans"', '600 1em "IBM Plex Sans"', '400 1em "Roboto Mono"'];
 Promise.race([
   Promise.all(BRAND_FONTS.map((f) => document.fonts.load(f).catch(() => null))),
   new Promise((r) => setTimeout(r, FONT_WAIT_MS)),

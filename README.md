@@ -44,7 +44,7 @@ CPU (one run per question and temperature; probabilities over the full vocabular
 run's temperature, top 10 kept per step). Example questions: "Describe a sunny morning in two
 sentences.", "Write a haiku about autumn.", "Describe the perfect pizza in two sentences."
 
-Re-record (needs `uv`; downloads CPU PyTorch + transformers):
+Re-record (needs `uv`; downloads CPU PyTorch + transformers and, on the first run, the model):
 
 ```bash
 uv run --no-project --python 3.12 --index https://download.pytorch.org/whl/cpu \
