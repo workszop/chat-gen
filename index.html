@@ -1,15 +1,15 @@
 <!doctype html>
-<html lang="en">
+<html lang="pl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="A visual explainer of how a chat model writes its answer: chat template, tokens, chances, the pick and the stop – with real SmolLM2 traces or LFM3-1.7B running live in the browser.">
+<meta name="description" data-i18n-content="metaDesc" content="A visual explainer of how a chat model writes its answer: chat template, tokens, chances, the pick and the stop – with real SmolLM2 traces or LFM3-1.7B running live in the browser.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg?v=202611091415">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=202611091415">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=202611091415">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=202611091415">
 <meta name="theme-color" content="#FFD500">
-<title>How a chat writes its answer</title>
+<title data-i18n="docTitle">How a chat writes its answer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=Roboto+Mono:wght@400;500&display=swap">
@@ -167,6 +167,7 @@ kbd { font-family: var(--font-mono); font-size: 12px; padding: 1px 6px; border: 
 .seg { display: inline-flex; gap: 2px; padding: 3px; background: var(--paper-3); border-radius: var(--r-pill); }
 .seg button { border: none; background: transparent; padding: 4px 12px; border-radius: var(--r-pill); font-weight: 600; font-size: 15px; color: var(--ink-2); cursor: pointer; font-family: var(--font-mono); }
 .seg button[aria-checked="true"] { background: var(--yellow); color: var(--yellow-ink); }
+.lang-seg { align-self: flex-start; }
 .switch { display: inline-flex; align-items: center; gap: 8px; border: none; background: none; cursor: pointer; font-size: 16px; color: var(--ink); padding: 2px; }
 .switch-track { width: 38px; height: 22px; border-radius: var(--r-pill); background: var(--line-strong); position: relative; transition: background-color .15s; }
 .switch-track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--paper); transition: transform .15s; }
@@ -221,7 +222,7 @@ kbd { font-family: var(--font-mono); font-size: 12px; padding: 1px 6px; border: 
 .callout { border-radius: var(--r-md); padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; }
 .callout p, .callout h3 { margin: 0; }
 .callout h3 { font-family: var(--font-display); font-size: 20px; }
-.callout p { font-size: 16px; line-height: 1.55; }
+.callout p { font-size: 16px; line-height: 1.55; color: inherit; }
 .callout b { color: inherit; }
 .callout-blue { background: var(--blue-soft); color: var(--blue-ink); }
 .callout-yellow { background: var(--yellow-soft); color: var(--yellow-ink); }
@@ -314,40 +315,44 @@ kbd { font-family: var(--font-mono); font-size: 12px; padding: 1px 6px; border: 
   <span class="edu-wordmark">edulab</span>
   <span class="grow"></span>
   <div class="pickers">
-    <label class="picker"><span>Model</span><select id="model-select" aria-label="Model">
-      <option value="recorded">SmolLM2 135M – recorded</option>
-      <option value="live">LFM3 1.7B – live in your browser</option>
+    <label class="picker"><span data-i18n="pickModel">Model</span><select id="model-select" data-i18n-aria="pickModel" aria-label="Model">
+      <option value="recorded" data-i18n="optRecorded">SmolLM2 135M – recorded</option>
+      <option value="live" data-i18n="optLive">LFM3 1.7B – live in your browser</option>
     </select></label>
-    <label class="picker"><span>Question</span><select id="question-select" aria-label="Question"></select></label>
+    <label class="picker"><span data-i18n="pickQuestion">Question</span><select id="question-select" data-i18n-aria="pickQuestion" aria-label="Question"></select></label>
   </div>
+  <div class="picker"><span data-i18n="pickLang" id="lang-label">Language</span>
+    <div class="seg lang-seg" role="radiogroup" aria-labelledby="lang-label" id="lang-seg">
+      <button role="radio" data-action="lang" data-lang="pl" lang="pl">PL</button><button role="radio" data-action="lang" data-lang="en" lang="en">EN</button>
+    </div></div>
 </div></header>
 
 <main class="app" id="app">
   <div class="page-head">
-    <h1 class="app-title">How a chat writes its answer</h1>
-    <p class="edu-lead">Left: what you see in a chat app. Right: what happens behind it – the model writes the answer one token at a time.</p>
+    <h1 class="app-title" data-i18n="docTitle">How a chat writes its answer</h1>
+    <p class="edu-lead" data-i18n="lead">Left: what you see in a chat app. Right: what happens behind it – the model writes the answer one token at a time.</p>
   </div>
   <div class="panels">
-    <section class="panel-chat" aria-label="What you see">
+    <section class="panel-chat" data-i18n-aria="chatHead" aria-label="What you see">
       <div class="card">
-        <div class="card-head"><div><h2>What you see</h2><p class="sub">The chat window</p></div></div>
+        <div class="card-head"><div><h2 data-i18n="chatHead">What you see</h2><p class="sub" data-i18n="chatSub">The chat window</p></div></div>
         <div class="card-body scroll" id="chat"></div>
         <div class="card-foot"><p class="foot-note" id="chat-foot"></p></div>
       </div>
     </section>
-    <section class="panel-stage" aria-label="What happens behind it">
+    <section class="panel-stage" data-i18n-aria="stageHead" aria-label="What happens behind it">
       <div class="card">
-        <div class="card-head"><h2>What happens behind it</h2><span class="head-meta" id="progress" data-testid="progress"></span></div>
-        <ol class="stepper" id="stepper" aria-label="Stages of text generation"></ol>
+        <div class="card-head"><h2 data-i18n="stageHead">What happens behind it</h2><span class="head-meta" id="progress" data-testid="progress"></span></div>
+        <ol class="stepper" id="stepper" data-i18n-aria="stepperAria" aria-label="Stages of text generation"></ol>
         <div class="card-body scroll" id="stage"></div>
         <div class="card-foot" id="controls">
-          <button class="btn" data-action="back"><svg class="ic" aria-hidden="true"><use href="#i-chevron-left"/></svg>Back</button>
-          <button class="btn btn-primary" data-action="next"><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"/></svg>Next step</button>
-          <button class="btn" data-action="next-token"><svg class="ic" aria-hidden="true"><use href="#i-skip-forward"/></svg>Next token</button>
+          <button class="btn" data-action="back"><svg class="ic" aria-hidden="true"><use href="#i-chevron-left"/></svg><span data-i18n="btnBack">Back</span></button>
+          <button class="btn btn-primary" data-action="next"><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"/></svg><span data-i18n="btnNext">Next step</span></button>
+          <button class="btn" data-action="next-token"><svg class="ic" aria-hidden="true"><use href="#i-skip-forward"/></svg><span data-i18n="btnNextToken">Next token</span></button>
           <button class="btn" data-action="play" id="play-btn">Play</button>
-          <button class="btn btn-text" data-action="restart"><svg class="ic" aria-hidden="true"><use href="#i-rotate-ccw"/></svg>Start over</button>
+          <button class="btn btn-text" data-action="restart"><svg class="ic" aria-hidden="true"><use href="#i-rotate-ccw"/></svg><span data-i18n="btnRestart">Start over</span></button>
           <span class="grow"></span>
-          <span class="kbd-hint"><kbd>←</kbd><kbd>→</kbd> step, <kbd>space</kbd> play</span>
+          <span class="kbd-hint" data-i18n-html="kbdHint"><kbd>←</kbd><kbd>→</kbd> step, <kbd>space</kbd> play</span>
         </div>
       </div>
     </section>
@@ -366,50 +371,308 @@ kbd { font-family: var(--font-mono); font-size: 12px; padding: 1px 6px; border: 
  * replays that run.
  *
  * DOM contract on #app: data-trace, data-stage, data-step, data-temperature,
- * data-answer-length, data-playing, data-source, data-live-status. Bar rows carry
+ * data-answer-length, data-playing, data-source, data-live-status, data-lang. Bar rows carry
  * data-chosen="true" for the picked token; Stop-stage rows carry data-run.
  */
 
 // ─── Constants ───
 
-const STAGES = [
-  { label: "One text", description: "Chat is joined" },
-  { label: "Tokens", description: "Text is split" },
-  { label: "Score", description: "Chance of each token" },
-  { label: "Pick & append", description: "Draw one, add it, repeat" },
-  { label: "Stop", description: "End-of-turn token" },
-];
 const STAGE = { template: 0, tokens: 1, score: 2, pick: 3, stop: 4 };
+const STAGE_COUNT = 5;
 
-const PART_LABEL = {
-  special: "Template marker",
-  role: "Role name",
-  system: "System instruction",
-  user: "Your question",
-  answer: "Generated answer",
+/** Polish plural: 1 token, 2-4 tokeny (not 12-14), else tokenów. */
+function plPlural(n, one, few, many) {
+  if (n === 1) return one;
+  const d = n % 10, h = n % 100;
+  return d >= 2 && d <= 4 && !(h >= 12 && h <= 14) ? few : many;
+}
+
+// UI text. Values are strings or functions of the arguments given to tx().
+// Polish is the primary language; the recorded SmolLM2 examples stay in English.
+const T = {
+  pl: {
+    docTitle: "Jak czat pisze odpowiedź",
+    metaDesc: "Wizualne wyjaśnienie, jak model czatu pisze odpowiedź: szablon czatu, tokeny, szanse, wybór i zatrzymanie – na prawdziwych przebiegach SmolLM2 albo z modelem LFM3-1.7B działającym na żywo w przeglądarce.",
+    pickModel: "Model", pickQuestion: "Pytanie", pickLang: "Język",
+    optRecorded: "SmolLM2 135M – nagrany",
+    optLive: "LFM3 1.7B – na żywo w przeglądarce",
+    lead: "Po lewej: to, co widzisz w aplikacji czatu. Po prawej: to, co dzieje się w tle – model pisze odpowiedź token po tokenie.",
+    chatHead: "Co widzisz", chatSub: "Okno czatu",
+    stageHead: "Co dzieje się w tle",
+    stepperAria: "Etapy generowania tekstu",
+    btnBack: "Wstecz", btnNext: "Następny krok", btnNextToken: "Następny token",
+    btnRestart: "Od początku", play: "Odtwórz", pause: "Pauza",
+    kbdHint: "<kbd>←</kbd><kbd>→</kbd> krok, <kbd>spacja</kbd> odtwarzanie",
+    stages: [
+      { label: "Szablon", description: "Czat zostaje sklejony w jeden tekst" },
+      { label: "Tokeny", description: "Tekst zostaje pocięty" },
+      { label: "Ocena", description: "Szansa każdego tokenu" },
+      { label: "Wybór", description: "Losuj, dopisz, powtórz" },
+      { label: "Stop", description: "Token końca tury" },
+    ],
+    part: {
+      special: "Znacznik szablonu",
+      role: "Nazwa roli",
+      system: "Instrukcja systemowa",
+      user: "Twoje pytanie",
+      answer: "Wygenerowana odpowiedź",
+    },
+    roleNote: {
+      system: "instrukcja dodana przez aplikację",
+      user: "twoje pytanie",
+      assistant: "tu zaczyna się odpowiedź",
+    },
+    tempNote: {
+      "0": "Temperatura 0: bez losowania – zawsze wygrywa najbardziej prawdopodobny token, więc odpowiedź za każdym razem jest taka sama.",
+      "0.3": "Niska temperatura: faworyt dostaje jeszcze większą część szansy, więc odpowiedź jest bardzo przewidywalna.",
+      "0.7": "Częsta wartość domyślna: zwykle wygrywa faworyt, czasem inny prawdopodobny token.",
+      "1": "Temperatura 1: szanse modelu bez zmian.",
+      "1.5": "Wysoka temperatura: szanse się wyrównują i wypadają mało prawdopodobne tokeny, więc tekst robi się przypadkowy.",
+    },
+    tokens: (n) => `${num(n)} ${plPlural(n, "token", "tokeny", "tokenów")}`,
+    newLine: "Nowa linia", newLineLegend: "↵ = nowa linia",
+    roleName: (r) => `Nazwa roli: ${r}`,
+    space: "(spacja)",
+    leadNote: "początek całego tekstu",
+    emptyAnswer: "Na razie pusto – od tego miejsca model pisze odpowiedź, token po tokenie.",
+    earlier: (n) => `… wcześniej: ${tx("tokens", n)}`,
+    nextTok: "następny token", nextTokTitle: "Następny token, jeszcze niewybrany",
+    probOf: (l) => `Szansa dla ${l}`,
+    probOthers: "Szansa wszystkich pozostałych tokenów",
+    others: (n) => `${num(n)} ${plPlural(n, "inny token", "inne tokeny", "innych tokenów")}`,
+    temperature: "Temperatura",
+    tplIntro: "Model nie widzi dymków czatu. Aplikacja skleja rozmowę w <b>jeden długi tekst</b> ze znacznikami, które mówią, kto ma głos. Tekst kończy się początkiem tury <b>assistant</b>, więc najbardziej naturalne, co model może dopisać, to odpowiedź.",
+    tplThink: (name) => `${esc(name)} umie myśleć na głos przed odpowiedzią. Aplikacja to wyłączyła, więc szablon zawiera już pusty blok myślenia (<b>&lt;think&gt;&lt;/think&gt;</b>), a odpowiedź idzie zaraz po nim.`,
+    tplSystem: "Instrukcję systemową dodała aplikacja, nie ty. ",
+    tplFamily: (name) => `Każda rodzina modeli ma własny szablon; ${esc(name)} uczył się na tym.`,
+    englishOnly: "SmolLM2-135M to bardzo mały model i zna tylko angielski, dlatego nagrane przykłady są po angielsku. W trybie na żywo (LFM3, wybór modelu u góry) możesz zadać własne pytanie, także po polsku.",
+    tokIntro: (v) => `Potem tekst zostaje pocięty na <b>tokeny</b> – całe słowa, kawałki słów i znaki interpunkcyjne. Każdy token to numer w słowniku modelu, a ten słownik ma <b>${tx("tokens", v)}</b>. Model pracuje wyłącznie na tych numerach.`,
+    showIds: "Pokaż numery tokenów",
+    splitHintSystem: "Poszukaj słów pociętych na dwie części, jak „H” + „ugging” albo „ass” + „istant”.",
+    splitHint: "Częste słowa to zwykle jeden token; rzadkie albo długie słowa są dzielone na kawałki.",
+    rankTop: "najbardziej prawdopodobny token",
+    rankRare: (k) => `rzadki token spoza ${k} najbardziej prawdopodobnych`,
+    rankN: (r) => `dopiero ${r}. na liście`,
+    scoreIntro: (n, i) => `Model czyta wszystkie dotychczasowe tokeny i daje <b>każdemu</b> tokenowi ze słownika szansę, że będzie następny. Oto ${n} najbardziej prawdopodobnych dla tokenu ${i}.`,
+    pickZero: (tok) => `Przy temperaturze 0 nie ma losowania: aplikacja zawsze bierze najbardziej prawdopodobny token, <b>„${tok}”</b>. `,
+    pickDraw: (tok, p, rank) => `Aplikacja losuje jeden token, a te szanse działają jak wagi na loterii. Wypadło <b>„${tok}”</b> (szansa ${p}) – ${rank}. `,
+    afterEnd: "To znacznik końca tury, więc nic nie zostaje dopisane – odpowiedź jest gotowa.",
+    afterThink: (i) => `To znacznik końca myślenia: wszystko przed nim było szkicem modelu, który aplikacje czatu ukrywają albo zwijają. Odpowiedź widoczna dla użytkownika zaczyna się od tokenu ${i}.`,
+    afterAppend: (i) => `Token trafia na koniec tekstu i do okna czatu, a cały tekst wraca do modelu, który ocenia token ${i}. Jeden token naraz – to jest to „pisanie”, które widzisz.`,
+    textSoFar: "Tekst do tej pory",
+    chancesFor: (i) => `Szanse dla tokenu ${i}`,
+    tempRestart: "Zmiana temperatury zaczyna odpowiedź od nowa – każda temperatura to osobny, prawdziwy przebieg modelu.",
+    stopEnd: (c, p) => `Tym razem model wybrał specjalny token <b>końca tury</b> ${c}${p ? ` (szansa ${p})` : ""}. Aplikacja przestaje prosić o kolejne tokeny i nie pokazuje tego znacznika. Odpowiedź jest gotowa.`,
+    stopLimit: (n) => `Aplikacja zatrzymała się na limicie ${tx("tokens", n)}, zanim model sam zdecydował się skończyć.`,
+    passes: (n, g, fin) => `<b>${n}</b> ${plPlural(n, "przejście", "przejścia", "przejść")} przez model: ${tx("tokens", g)} odpowiedzi${fin ? " i token końca tury" : ""}.`,
+    notTop: (k, n) => `Wybory inne niż najbardziej prawdopodobny token: <b>${k}</b> z ${n}.`,
+    total: (n) => `Pytanie razem z odpowiedzią to teraz <b>${tx("tokens", n)}</b>. Jeśli zadasz pytanie uzupełniające, całość zostanie wysłana jeszcze raz – model nie pamięta niczego między turami.`,
+    allTemps: "To samo pytanie w każdej temperaturze – prawdziwe przebiegi modelu",
+    tempAria: (k) => `Temperatura ${k}`,
+    stoppedLimit: " … (przerwane na limicie długości)",
+    afterDraft: (m) => `(po szkicu zamkniętym przez ${m})`,
+    pickTemp: "Wybierz temperaturę, żeby zobaczyć, jak powstawała ta odpowiedź.",
+    bigModels: (p) => `Duże modele czatu działają dokładnie tak samo. Mają setki miliardów parametrów zamiast ${esc(p)}, więc zgadują dużo lepiej, ale nadal piszą token po tokenie.`,
+    noGpuTitle: "Uwaga: ta przeglądarka nie ma WebGPU",
+    noGpuText: "Model na żywo potrzebuje karty graficznej przez WebGPU. Otwórz tę stronę w Chrome albo Edge albo użyj nagranych przykładów SmolLM2.",
+    loadBtn: "Pobierz i uruchom model",
+    gpuYes: "Znaleziono WebGPU – model będzie działał na karcie graficznej.",
+    gpuChecking: "Sprawdzam WebGPU…", gpuNo: "Brak WebGPU.",
+    downloading: (a, b) => `Pobieranie modelu: ${a} z ${b}`,
+    dlStart: "Rozpoczynam pobieranie…", dlAria: "Pobieranie",
+    loadingMem: "Ładuję model do pamięci…",
+    startFail: "Nie udało się uruchomić modelu", retry: "Spróbuj ponownie",
+    genFail: "Generowanie nie powiodło się",
+    modelReady: "Model gotowy na karcie graficznej (WebGPU).",
+    yourQuestion: "Twoje pytanie", examples: "Przykłady:",
+    tip: (n) => `Podpowiedź: podaj długość („w dwóch zdaniach”, „haiku”). Otwarte pytania często przekraczają limit ${tx("tokens", n)}.`,
+    askBtn: (n) => `Napisz odpowiedź w ${n} temperaturach`,
+    backToExpl: "Wróć do wyjaśnienia",
+    genProgress: (tt, s) => `Temperatura ${tt}: token ${s}`,
+    readingQ: "Czytam pytanie…", genAria: "Pisanie odpowiedzi",
+    genNote: (list, n, k) => `Jedna odpowiedź na każdą temperaturę (${list}), każda do ${tx("tokens", n)}. W czacie po lewej widać, jak powstają. Przy każdym tokenie aplikacja zapisuje ${k} największych szans modelu i wylosowany token, a wyjaśnienie odtwarza je potem krok po kroku.`,
+    cancel: "Anuluj",
+    liveIntro: "LFM3-1.7B to model czatu firmy Liquid AI z <b>1,7 miliarda</b> parametrów, około 13 razy większy od nagranego modelu SmolLM2. Działa w całości na tym komputerze: przeglądarka pobiera go raz (około 1,3 GB, zostaje w pamięci podręcznej przeglądarki), a twoje pytanie nie opuszcza tej strony. Żeby użyć karty graficznej, potrzebuje przeglądarki z WebGPU (Chrome albo Edge).",
+    howTitle: "Jak działa tryb na żywo: najpierw prawdziwe odpowiedzi, potem odtworzenie",
+    how1: (n, list) => `<b>1. Model najpierw pisze prawdziwe odpowiedzi.</b> Gdy naciśniesz przycisk, LFM3 odpowiada na twoje pytanie ${n} razy, raz w każdej temperaturze (${list}). To zwykłe generowanie, token po tokenie, tak samo jak w aplikacji czatu.`,
+    how2: (k) => `<b>2. Każdy krok jest zapisywany.</b> Przed wyborem każdego tokenu aplikacja zapisuje prawdziwe szanse modelu dla ${k} najlepszych tokenów (spośród wszystkich 128 000), a potem token wylosowany z tymi szansami. Model pisze dalej od tego tokenu, więc zapisane kroki składają się na jego prawdziwą odpowiedź.`,
+    how3: "<b>3. Czat odtwarza ten przebieg.</b> Wyjaśnienie odtwarza zapisane kroki tak wolno, jak chcesz: szablon, tokeny, szanse i każdy wybór. Nic nie jest liczone od nowa ani zmyślane. Czat pokazuje odpowiedź, którą model naprawdę napisał, a każdy pasek to szansa, którą model naprawdę podał.",
+    how4: "Dlaczego najpierw zapis, a nie podgląd na żywo? Model jest szybki (około 10–30 tokenów na sekundę), za szybki, żeby nadążyć wzrokiem. Zapisany przebieg można przewijać w przód i w tył oraz przełączać temperatury, żeby porównać prawdziwe odpowiedzi obok siebie.",
+    askOwn: "Zadaj własne pytanie…",
+    writingAt: (tt) => `Piszę odpowiedź w temperaturze ${tt}`,
+    chatReady: "Model gotowy – wyślij pytanie z panelu po prawej",
+    chatLoading: "Ładuję model…",
+    chatNotLoaded: "Model nie jest jeszcze załadowany – uruchom go po prawej",
+    footSetup: "LFM3-1.7B (1,7 miliarda parametrów) działa w tej przeglądarce na karcie graficznej.",
+    sent: "Wysłano – czekam na odpowiedź…",
+    thinkingLabel: "Myślenie – szkic, który aplikacje czatu ukrywają albo zwijają",
+    done: "Odpowiedź gotowa",
+    cutOff: "Ucięte – aplikacja doszła do limitu długości",
+    footLive: (name, p) => `Napisane na żywo w tej przeglądarce przez ${name} (${p} parametrów), a potem odtworzone tutaj token po tokenie z prawdziwego przebiegu.`,
+    footRecorded: (name, p) => `Nagrane z prawdziwego modelu ${name} (${p} parametrów) uruchomionego na tym komputerze. Ten mały model zna tylko angielski, dlatego przykłady są po angielsku.`,
+    footReal: " Każda liczba w wyjaśnieniu to jego prawdziwy wynik.",
+    stageOf: (i, n) => `Etap ${i} z ${n}`,
+    doneTokens: (n) => `Gotowe – ${tx("tokens", n)}`,
+    tokenOf: (i, n) => `Token ${i} z ${n}`,
+    runLive: "Uruchom LFM3-1.7B w przeglądarce",
+    paramsRecorded: "135 milionów", paramsLive: "1,7 miliarda",
+    liveExamples: [
+      "Opisz słoneczny poranek w dwóch zdaniach.",
+      "Napisz haiku o jesieni.",
+      "Opisz idealną pizzę w dwóch zdaniach.",
+    ],
+  },
+  en: {
+    docTitle: "How a chat writes its answer",
+    metaDesc: "A visual explainer of how a chat model writes its answer: chat template, tokens, chances, the pick and the stop – with real SmolLM2 traces or LFM3-1.7B running live in the browser.",
+    pickModel: "Model", pickQuestion: "Question", pickLang: "Language",
+    optRecorded: "SmolLM2 135M – recorded",
+    optLive: "LFM3 1.7B – live in your browser",
+    lead: "Left: what you see in a chat app. Right: what happens behind it – the model writes the answer one token at a time.",
+    chatHead: "What you see", chatSub: "The chat window",
+    stageHead: "What happens behind it",
+    stepperAria: "Stages of text generation",
+    btnBack: "Back", btnNext: "Next step", btnNextToken: "Next token",
+    btnRestart: "Start over", play: "Play", pause: "Pause",
+    kbdHint: "<kbd>←</kbd><kbd>→</kbd> step, <kbd>space</kbd> play",
+    stages: [
+      { label: "One text", description: "Chat is joined" },
+      { label: "Tokens", description: "Text is split" },
+      { label: "Score", description: "Chance of each token" },
+      { label: "Pick & append", description: "Draw one, add it, repeat" },
+      { label: "Stop", description: "End-of-turn token" },
+    ],
+    part: {
+      special: "Template marker",
+      role: "Role name",
+      system: "System instruction",
+      user: "Your question",
+      answer: "Generated answer",
+    },
+    roleNote: {
+      system: "instruction added by the app",
+      user: "your question",
+      assistant: "the answer starts here",
+    },
+    tempNote: {
+      "0": "Temperature 0: no lottery – the top token always wins, so the answer is the same every time.",
+      "0.3": "Low temperature: the favourite gets even more of the chance, so the answer is very predictable.",
+      "0.7": "A common default: mostly the favourite, sometimes another likely token.",
+      "1": "Temperature 1: the model's own chances, unchanged.",
+      "1.5": "High temperature: the chances spread out and unlikely tokens get picked, so the text turns random.",
+    },
+    tokens: (n) => `${num(n)} ${n === 1 ? "token" : "tokens"}`,
+    newLine: "New line", newLineLegend: "↵ = new line",
+    roleName: (r) => `Role name: ${r}`,
+    space: "(space)",
+    leadNote: "start of the whole text",
+    emptyAnswer: "Nothing here yet – the model writes the answer from this point, one token at a time.",
+    earlier: (n) => `… ${num(n)} earlier tokens`,
+    nextTok: "next token", nextTokTitle: "The next token, not chosen yet",
+    probOf: (l) => `Probability of ${l}`,
+    probOthers: "Probability of all other tokens",
+    others: (n) => `${num(n)} other tokens`,
+    temperature: "Temperature",
+    tplIntro: "The model does not see chat bubbles. The app glues the conversation into <b>one long text</b>, with markers that say who is talking. It ends with the start of an <b>assistant</b> turn, so the most natural thing to write next is the answer.",
+    tplThink: (name) => `${esc(name)} can think out loud before it answers. The app switched that off, so the template already holds an empty thinking block (<b>&lt;think&gt;&lt;/think&gt;</b>) and the answer comes straight after it.`,
+    tplSystem: "The system instruction was added by the app, not typed by you. ",
+    tplFamily: (name) => `Each model family has its own template; this is the one ${esc(name)} was trained with.`,
+    englishOnly: "",
+    tokIntro: (v) => `Next the text is cut into <b>tokens</b> – whole words, pieces of words and punctuation. Each token is a number in the model's vocabulary of <b>${tx("tokens", v)}</b>. The model only ever works with these numbers.`,
+    showIds: "Show token numbers",
+    splitHintSystem: "Look for words split in two, like “H” + “ugging” or “ass” + “istant”.",
+    splitHint: "Common words are one token each; rare or long words are split into pieces.",
+    rankTop: "the most likely token",
+    rankRare: (k) => `a rare token outside the top ${k}`,
+    rankN: (r) => `only number ${r} on the list`,
+    scoreIntro: (n, i) => `The model reads all the tokens so far and gives <b>every</b> token in its vocabulary a chance of coming next. Here are the top ${n} for token ${i}.`,
+    pickZero: (tok) => `At temperature 0 there is no lottery: the app always takes the most likely token, <b>“${tok}”</b>. `,
+    pickDraw: (tok, p, rank) => `The app draws one token at random, using these chances like a weighted lottery. It picked <b>“${tok}”</b> (${p} chance) – ${rank}. `,
+    afterEnd: "That is the end-of-turn marker, so nothing is added – the answer is finished.",
+    afterThink: (i) => `That is the end-of-thinking marker: everything before it was the model's draft, which chat apps hide or fold away. The answer the person sees starts with token ${i}.`,
+    afterAppend: (i) => `It is added to the end of the text and shown in the chat, and the whole text goes back into the model to score token ${i}. One token at a time – that is the “typing” you see.`,
+    textSoFar: "Text so far",
+    chancesFor: (i) => `Chances for token ${i}`,
+    tempRestart: "Changing it starts the answer again – each temperature is its own real run of the model.",
+    stopEnd: (c, p) => `This time the model picked the special <b>end-of-turn</b> token ${c}${p ? ` (${p} chance)` : ""}. The app stops asking for more and does not show that marker. The answer is done.`,
+    stopLimit: (n) => `The app stopped at its length limit of ${tx("tokens", n)} before the model chose to end.`,
+    passes: (n, g, fin) => `<b>${n}</b> passes through the model: ${g} tokens of answer${fin ? " plus the end-of-turn token" : ""}.`,
+    notTop: (k, n) => `<b>${k}</b> of ${n} picks were not the single most likely token.`,
+    total: (n) => `The question plus the answer is now <b>${n}</b> tokens. If you ask a follow-up, all of it is sent again – the model has no memory between turns.`,
+    allTemps: "The same question at every temperature – real runs of the model",
+    tempAria: (k) => `Temperature ${k}`,
+    stoppedLimit: " … (stopped at the length limit)",
+    afterDraft: (m) => `(after a draft closed with ${m})`,
+    pickTemp: "Pick a temperature to watch that answer being written.",
+    bigModels: (p) => `Big chat models work exactly the same way. They have hundreds of billions of parameters instead of ${esc(p)}, so their guesses are much better – but they still write one token at a time.`,
+    noGpuTitle: "Warning: this browser has no WebGPU",
+    noGpuText: "The live model needs the graphics card through WebGPU. Open this page in Chrome or Edge – or use the recorded SmolLM2 examples.",
+    loadBtn: "Download and start the model",
+    gpuYes: "WebGPU found – the model will run on the graphics card.",
+    gpuChecking: "Checking for WebGPU…", gpuNo: "WebGPU is missing.",
+    downloading: (a, b) => `Downloading the model: ${a} of ${b}`,
+    dlStart: "Starting the download…", dlAria: "Download",
+    loadingMem: "Loading the model into memory…",
+    startFail: "The model could not start", retry: "Try again",
+    genFail: "Generation failed",
+    modelReady: "Model ready on the graphics card (WebGPU).",
+    yourQuestion: "Your question", examples: "Examples:",
+    tip: (n) => `Tip: ask for a set length (“in two sentences”, “a haiku”) – open questions often run past the ${n}-token limit.`,
+    askBtn: (n) => `Write the answer at ${n} temperatures`,
+    backToExpl: "Back to the explanation",
+    genProgress: (tt, s) => `Temperature ${tt}: token ${s}`,
+    readingQ: "Reading the question…", genAria: "Writing the answers",
+    genNote: (list, n, k) => `One answer per temperature (${list}), up to ${n} tokens each – you can watch them being written in the chat on the left. For every token the app records the model's top ${k} chances and the token it drew; the explanation then replays them step by step.`,
+    cancel: "Cancel",
+    liveIntro: "LFM3-1.7B is a chat model from Liquid AI with <b>1.7 billion</b> parameters – about 13 times bigger than the recorded SmolLM2 model. It runs entirely on this computer: the browser downloads it once (about 1.3 GB, kept in the browser's cache) and your question never leaves this page. It needs a browser with WebGPU (Chrome or Edge) to use the graphics card.",
+    howTitle: "How the live mode works: first real answers, then the replay",
+    how1: (n, list) => `<b>1. The model writes the real answers first.</b> When you press the button, LFM3 answers your question ${n} times, once per temperature (${list}). This is ordinary generation, one token at a time, exactly as in a chat app.`,
+    how2: (k) => `<b>2. Every step is written down.</b> Before each token is chosen, the app saves the model's real chances for the top ${k} tokens (out of all 128,000) and then the token that was drawn with those chances. The model continues from that token, so the saved steps add up to its real answer.`,
+    how3: "<b>3. The chat replays that run.</b> The explanation then plays the saved steps back as slowly as you like – the template, the tokens, the chances and every pick. Nothing is recomputed or made up: the chat shows the answer the model really wrote, and each bar is the chance it really gave.",
+    how4: "Why record first instead of showing it live? The model is fast (about 10–30 tokens a second), far too fast to follow. With the run saved, you can step back and forth, and switch temperatures to compare real answers side by side.",
+    askOwn: "Ask your own question…",
+    writingAt: (tt) => `Writing the answer at temperature ${tt}`,
+    chatReady: "Model ready – send the question from the panel on the right",
+    chatLoading: "Loading the model…",
+    chatNotLoaded: "The model is not loaded yet – start it on the right",
+    footSetup: "LFM3-1.7B (1.7 billion parameters) runs in this browser on the graphics card.",
+    sent: "Sent – waiting for the answer…",
+    thinkingLabel: "Thinking – a draft, which chat apps hide or fold away",
+    done: "Answer complete",
+    cutOff: "Cut off – the app's length limit was reached",
+    footLive: (name, p) => `Written live in this browser by ${name} (${p} parameters), then replayed here token by token from its real run.`,
+    footRecorded: (name, p) => `Recorded from the real model ${name} (${p} parameters) running on this computer.`,
+    footReal: " Every number in the explanation is its real output.",
+    stageOf: (i, n) => `Stage ${i} of ${n}`,
+    doneTokens: (n) => `Done – ${tx("tokens", n)}`,
+    tokenOf: (i, n) => `Token ${i} of ${n}`,
+    runLive: "Run LFM3-1.7B in your browser",
+    paramsRecorded: "135 million", paramsLive: "1.7 billion",
+    liveExamples: null, // the recorded questions
+  },
 };
+const LANGS = ["pl", "en"];
+const LANG_KEY = "chat-gen.lang";
+
+/** Text for the current language (functions get the extra arguments). Named tx because t is a token everywhere else. */
+function tx(key, ...args) {
+  const v = T[S.lang][key] ?? T.en[key];
+  return typeof v === "function" ? v(...args) : v;
+}
+const num = (n) => n.toLocaleString(S.lang === "pl" ? "pl-PL" : "en");
+/** Temperature as shown: 0,3 in Polish, 0.3 in English (data keys keep the dot). */
+const tempList = () => LIVE_TEMPS.map(tempLabel).join(S.lang === "pl" ? "; " : ", ");
+const tempLabel = (k) => (S.lang === "pl" ? String(k).replace(".", ",") : String(k));
 
 const PLAY_INTERVAL_MS = 650;
 const CONTEXT_TAIL = 16; // last tokens shown in the "Text so far" strip
 const SHOWN = 5; // candidates shown as bars (the data holds the top 10)
 const DEFAULT_T = "0.7";
 
-const TEMPERATURE_NOTE = {
-  "0": "Temperature 0: no lottery – the top token always wins, so the answer is the same every time.",
-  "0.3": "Low temperature: the favourite gets even more of the chance, so the answer is very predictable.",
-  "0.7": "A common default: mostly the favourite, sometimes another likely token.",
-  "1": "Temperature 1: the model's own chances, unchanged.",
-  "1.5": "High temperature: the chances spread out and unlikely tokens get picked, so the text turns random.",
-};
 
 const SPECIAL = new Set(["<|im_start|>", "<|im_end|>", "<|startoftext|>", "<think>", "</think>"]);
 const END_THINK = "</think>";
 
-const ROLE_NOTE = {
-  system: "instruction added by the app",
-  user: "your question",
-  assistant: "the answer starts here",
-};
 
 // Live model (LFM3-1.7B, ONNX). q4 = 4-bit weights with 32-bit maths: q4f16
 // overflows on WebGPU and the answers turn into garbage (same as workszop/qwen).
@@ -423,12 +686,14 @@ const LIVE_TOPK = 10;
 const LIVE_MAX_NEW = 200;
 const LIVE_SEED = 5;
 
-const DATA = { ...window.TRACES, params: "135 million", source: "recorded" };
-const LIVE_EXAMPLES = DATA.questions.map((q) => q.question);
+const DATA = { ...window.TRACES, paramsKey: "paramsRecorded", source: "recorded" };
+/** Example questions for the live model, in the page language. */
+const liveExamples = () => tx("liveExamples") ?? DATA.questions.map((q) => q.question);
 
 // ─── State ───
 
 const S = {
+  lang: "pl", // set by initLang()
   view: { trace: 0, temp: DEFAULT_T, stage: STAGE.template, step: 0 },
   source: "recorded", // "recorded" | "live"
   composing: false, // live: asking a new question
@@ -441,7 +706,7 @@ const S = {
     generation: null, // { temperature, step, answer }
     error: null,
     dataset: null, // same shape as DATA
-    question: LIVE_EXAMPLES[0],
+    question: "", // set by initLang()
   },
 };
 let playTimer = null;
@@ -465,6 +730,7 @@ const el = {
   stage: document.getElementById("stage"),
   controls: document.getElementById("controls"),
   play: document.getElementById("play-btn"),
+  lang: document.getElementById("lang-seg"),
 };
 
 // ─── Helpers: data ───
@@ -492,13 +758,14 @@ const contentPart = (role) => (role === "system" || role === "user" ? role : "an
 const withId = (t, text) => (S.showIds && t.id !== undefined ? `${text} · ${t.id}` : text);
 
 /** Token text for display: new lines show as ↵, spaces are left unmarked. */
-const visible = (text) => text.replace(/\n/g, "↵").trim() || "(space)";
+const visible = (text) => text.replace(/\n/g, "↵").trim() || tx("space");
 
 function formatPercent(p) {
-  if (p >= 0.995) return `${(p * 100).toFixed(1)}%`;
-  if (p >= 0.1) return `${Math.round(p * 100)}%`;
-  if (p >= 0.001) return `${(p * 100).toFixed(1)}%`;
-  return "<0.1%";
+  const out = p >= 0.995 ? `${(p * 100).toFixed(1)}%`
+    : p >= 0.1 ? `${Math.round(p * 100)}%`
+    : p >= 0.001 ? `${(p * 100).toFixed(1)}%`
+    : "<0.1%";
+  return S.lang === "pl" ? out.replace(".", ",") : out;
 }
 
 /** Template markers before the first turn (LFM3's <|startoftext|>). */
@@ -627,22 +894,22 @@ function chip(text, cls, title, size = "") {
 }
 
 function tokenChip(t, part, size) {
-  return chip(withId(t, visible(t.text)), part, PART_LABEL[part], size);
+  return chip(withId(t, visible(t.text)), part, tx("part")[part], size);
 }
 
 function legend(parts) {
-  return `<div class="legend">${parts.map((p) => chip(PART_LABEL[p], p)).join("")}<span>↵ = new line</span></div>`;
+  return `<div class="legend">${parts.map((p) => chip(tx("part")[p], p)).join("")}<span>${tx("newLineLegend")}</span></div>`;
 }
 
 /** Template markers and role tokens of a turn header. */
 function markers(tokens, role, asTokens) {
   return tokens
     .map((t) => {
-      if (SPECIAL.has(t.text)) return chip(withId(t, t.text), "special", PART_LABEL.special, "sm");
+      if (SPECIAL.has(t.text)) return chip(withId(t, t.text), "special", tx("part").special, "sm");
       const blank = !t.text.trim();
       if (blank && !asTokens) return "";
       const isNewline = blank && t.text.includes("\n");
-      return chip(withId(t, visible(t.text)), isNewline ? "special" : "role", blank ? "New line" : `Role name: ${role}`, "sm");
+      return chip(withId(t, visible(t.text)), isNewline ? "special" : "role", blank ? tx("newLine") : tx("roleName", role), "sm");
     })
     .join("");
 }
@@ -652,7 +919,7 @@ function templateView(tr, asTokens) {
   const turns = splitTurns(tr.promptTokens);
   const lead = leadingTokens(tr.promptTokens);
   const leadRow = lead.length
-    ? `<div class="tokens">${markers(lead, "", asTokens)}<span class="turn-note">start of the whole text</span></div>`
+    ? `<div class="tokens">${markers(lead, "", asTokens)}<span class="turn-note">${tx("leadNote")}</span></div>`
     : "";
   const rows = turns
     .map((turn) => {
@@ -667,10 +934,10 @@ function templateView(tr, asTokens) {
           : `<p class="txt big">${esc(turn.content.map((t) => t.text).join(""))}</p>`
         : "";
       const empty = turn.role === "assistant"
-        ? `<p class="note">Nothing here yet – the model writes the answer from this point, one token at a time.</p>`
+        ? `<p class="note">${tx("emptyAnswer")}</p>`
         : "";
       const foot = turn.footer.length ? `<div class="tokens">${markers(turn.footer, turn.role, asTokens)}</div>` : "";
-      return `<div class="turn"><div class="turn-head">${head}<span class="turn-note">${esc(ROLE_NOTE[turn.role] ?? "")}</span></div>` +
+      return `<div class="turn"><div class="turn-head">${head}<span class="turn-note">${esc(tx("roleNote")[turn.role] ?? "")}</span></div>` +
         `<div class="turn-body">${body}${empty}${foot}</div></div>`;
     })
     .join("");
@@ -684,9 +951,9 @@ function contextStrip(tr, upto, withSlot) {
     ...textSteps(tr, upto).map((s) => ({ text: s.chosen.text, part: SPECIAL.has(s.chosen.text) ? "special" : "answer" })),
   ];
   const shown = all.slice(-CONTEXT_TAIL);
-  return `<div class="tokens"><span class="note">… ${all.length - shown.length} earlier tokens</span>` +
+  return `<div class="tokens"><span class="note">${tx("earlier", all.length - shown.length)}</span>` +
     shown.map((t) => tokenChip(t, t.part)).join("") +
-    (withSlot ? chip("next token", "next", "The next token, not chosen yet") : "") +
+    (withSlot ? chip(tx("nextTok"), "next", tx("nextTokTitle")) : "") +
     `</div>`;
 }
 
@@ -704,26 +971,26 @@ function probabilityBars(d, tr, step, temp, isPicked) {
     const fill = !isPicked ? "" : chosen ? "picked" : "muted";
     return `<div class="bar-row"${chosen ? ' data-chosen="true"' : ""}>` +
       `<span class="bar-label">${chip(label, chipCls)}</span>` +
-      `<div class="bar" role="progressbar" aria-label="Probability of ${esc(label)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${p * 100}">` +
+      `<div class="bar" role="progressbar" aria-label="${esc(tx("probOf", label))}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${p * 100}">` +
       `<div class="bar-fill ${fill}" style="width:${(p * 100).toFixed(3)}%"></div></div>` +
       `<span class="bar-val">${formatPercent(p)}</span></div>`;
   };
   return `<div class="bars">` +
     s.candidates.slice(0, SHOWN).map((c, i) => row(visible(c.text), probs[i], isPicked && c.id === s.chosen.id, isEos(c, tr.eosId))).join("") +
     (outside ? row(visible(s.chosen.text), s.chosenProb[temp], true, false) : "") +
-    `<div class="bar-row"><span class="bar-others">${others.toLocaleString("en")} other tokens</span>` +
-    `<div class="bar" role="progressbar" aria-label="Probability of all other tokens" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${rest * 100}">` +
+    `<div class="bar-row"><span class="bar-others">${tx("others", others)}</span>` +
+    `<div class="bar" role="progressbar" aria-label="${tx("probOthers")}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${rest * 100}">` +
     `<div class="bar-fill rest" style="width:${(rest * 100).toFixed(3)}%"></div></div>` +
     `<span class="bar-val">${formatPercent(rest)}</span></div></div>`;
 }
 
 function temperatureControl(d) {
-  return `<div class="row"><span class="label">Temperature</span>` +
-    `<div class="seg" role="radiogroup" aria-label="Temperature">` +
+  return `<div class="row"><span class="label">${tx("temperature")}</span>` +
+    `<div class="seg" role="radiogroup" aria-label="${tx("temperature")}">` +
     d.temperatures.map((t) => {
       const k = String(t);
       const on = k === S.view.temp;
-      return `<button role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}" data-action="temp" data-temp="${k}">${k}</button>`;
+      return `<button role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}" data-action="temp" data-temp="${k}">${tempLabel(k)}</button>`;
     }).join("") +
     `</div></div>`;
 }
@@ -741,49 +1008,45 @@ function stageBody() {
 
   if (v.stage === STAGE.template) {
     return `<div class="stack">
-      <p class="txt">The model does not see chat bubbles. The app glues the conversation into <b>one long text</b>, with markers that say who is talking. It ends with the start of an <b>assistant</b> turn, so the most natural thing to write next is the answer.</p>
+      ${d.source === "recorded" && tx("englishOnly") ? `<div class="callout callout-blue" data-testid="english-only"><p>${tx("englishOnly")}</p></div>` : ""}
+      <p class="txt">${tx("tplIntro")}</p>
       ${templateView(tr, false)}
-      ${hasThink ? `<p class="note">${esc(name)} can think out loud before it answers. The app switched that off, so the template already holds an empty thinking block (<b>&lt;think&gt;&lt;/think&gt;</b>) and the answer comes straight after it.</p>` : ""}
-      <p class="note">${hasSystem ? "The system instruction was added by the app, not typed by you. " : ""}Each model family has its own template; this is the one ${esc(name)} was trained with.</p>
+      ${hasThink ? `<p class="note">${tx("tplThink", name)}</p>` : ""}
+      <p class="note">${hasSystem ? tx("tplSystem") : ""}${tx("tplFamily", name)}</p>
     </div>`;
   }
 
   if (v.stage === STAGE.tokens) {
     return `<div class="stack">
-      <p class="txt">Next the text is cut into <b>tokens</b> – whole words, pieces of words and punctuation. Each token is a number in the model's vocabulary of <b>${d.vocabSize.toLocaleString("en")}</b> tokens. The model only ever works with these numbers.</p>
-      <div class="row"><b>${tr.promptTokens.length} tokens</b>
-        <button class="switch" role="switch" aria-checked="${S.showIds}" data-action="ids"><span class="switch-track" aria-hidden="true"></span>Show token numbers</button></div>
+      <p class="txt">${tx("tokIntro", d.vocabSize)}</p>
+      <div class="row"><b>${tx("tokens", tr.promptTokens.length)}</b>
+        <button class="switch" role="switch" aria-checked="${S.showIds}" data-action="ids"><span class="switch-track" aria-hidden="true"></span>${tx("showIds")}</button></div>
       ${templateView(tr, true)}
       ${legend(hasSystem ? ["special", "role", "system", "user"] : ["special", "role", "user"])}
-      <p class="note">${hasSystem ? "Look for words split in two, like “H” + “ugging” or “ass” + “istant”." : "Common words are one token each; rare or long words are split into pieces."}</p>
+      <p class="note">${hasSystem ? tx("splitHintSystem") : tx("splitHint")}</p>
     </div>`;
   }
 
   if (v.stage === STAGE.score || v.stage === STAGE.pick) {
     const isPicked = v.stage === STAGE.pick;
     const isEnd = isEos(s.chosen, tr.eosId);
-    const rankText = s.rank === 1 ? "the most likely token" : s.rank === null ? `a rare token outside the top ${d.topK}` : `only number ${s.rank} on the list`;
+    const rankText = s.rank === 1 ? tx("rankTop") : s.rank === null ? tx("rankRare", d.topK) : tx("rankN", s.rank);
     let intro;
     if (!isPicked) {
-      intro = `The model reads all the tokens so far and gives <b>every</b> token in its vocabulary a chance of coming next. Here are the top ${SHOWN} for token ${v.step + 1}.`;
+      intro = tx("scoreIntro", SHOWN, v.step + 1);
     } else {
-      const pick = v.temp === "0"
-        ? `At temperature 0 there is no lottery: the app always takes the most likely token, <b>“${esc(visible(s.chosen.text))}”</b>. `
-        : `The app draws one token at random, using these chances like a weighted lottery. It picked <b>“${esc(visible(s.chosen.text))}”</b> (${formatPercent(s.chosenProb[v.temp])} chance) – ${rankText}. `;
-      const after = isEnd
-        ? "That is the end-of-turn marker, so nothing is added – the answer is finished."
-        : s.chosen.text === END_THINK
-          ? `That is the end-of-thinking marker: everything before it was the model's draft, which chat apps hide or fold away. The answer the person sees starts with token ${v.step + 2}.`
-          : `It is added to the end of the text and shown in the chat, and the whole text goes back into the model to score token ${v.step + 2}. One token at a time – that is the “typing” you see.`;
+      const tok = esc(visible(s.chosen.text));
+      const pick = v.temp === "0" ? tx("pickZero", tok) : tx("pickDraw", tok, formatPercent(s.chosenProb[v.temp]), rankText);
+      const after = isEnd ? tx("afterEnd") : s.chosen.text === END_THINK ? tx("afterThink", v.step + 2) : tx("afterAppend", v.step + 2);
       intro = pick + esc(after);
     }
     return `<div class="stack">
       <p class="txt">${intro}</p>
-      <div class="box"><div class="box-head"><span class="label">Text so far</span></div>
+      <div class="box"><div class="box-head"><span class="label">${tx("textSoFar")}</span></div>
         <div class="box-body">${contextStrip(tr, isPicked ? v.step + 1 : v.step, !isPicked)}${legend(["special", "role", "user", "answer"])}</div></div>
-      <div class="box"><div class="box-head"><span class="label">Chances for token ${v.step + 1}</span>${temperatureControl(d)}</div>
+      <div class="box"><div class="box-head"><span class="label">${tx("chancesFor", v.step + 1)}</span>${temperatureControl(d)}</div>
         <div class="box-body">${probabilityBars(d, tr, v.step, v.temp, isPicked)}
-          <p class="note">${esc(TEMPERATURE_NOTE[v.temp])} Changing it starts the answer again – each temperature is its own real run of the model.</p></div></div>
+          <p class="note">${esc(tx("tempNote")[v.temp])} ${tx("tempRestart")}</p></div></div>
     </div>`;
   }
 
@@ -792,31 +1055,31 @@ function stageBody() {
   const generated = textSteps(tr).length;
   const notTop = tr.steps.filter((x) => x.rank !== 1).length;
   const head = tr.finished
-    ? `This time the model picked the special <b>end-of-turn</b> token ${chip(eosStep?.chosen.text ?? "<|im_end|>", "special")}${eosStep ? ` (${formatPercent(eosStep.chosenProb[v.temp])} chance)` : ""}. The app stops asking for more and does not show that marker. The answer is done.`
-    : `The app stopped at its length limit of ${tr.steps.length} tokens before the model chose to end.`;
+    ? tx("stopEnd", chip(eosStep?.chosen.text ?? "<|im_end|>", "special"), eosStep ? formatPercent(eosStep.chosenProb[v.temp]) : "")
+    : tx("stopLimit", tr.steps.length);
   const runs = d.temperatures.map((t) => {
     const k = String(t);
     const run = d.questions[v.trace].runs[k];
     const cur = k === v.temp;
-    const draft = run.answer.includes(END_THINK) ? ` <span class="note">(after a draft closed with ${esc(END_THINK)})</span>` : "";
+    const draft = run.answer.includes(END_THINK) ? ` <span class="note">${tx("afterDraft", esc(END_THINK))}</span>` : "";
     return `<div class="run${cur ? " current" : ""}" data-run="${k}">
-      <button class="btn btn-sm${cur ? " btn-primary" : ""}" aria-label="Temperature ${k}" data-action="run" data-temp="${k}">${k}</button>
-      <p class="run-text keep-lines">${esc(finalAnswer(run.answer).trim())}${run.finished ? "" : " … (stopped at the length limit)"}${draft}</p></div>`;
+      <button class="btn btn-sm${cur ? " btn-primary" : ""}" aria-label="${tx("tempAria", tempLabel(k))}" data-action="run" data-temp="${k}">${tempLabel(k)}</button>
+      <p class="run-text keep-lines">${esc(finalAnswer(run.answer).trim())}${run.finished ? "" : tx("stoppedLimit")}${draft}</p></div>`;
   }).join("");
   return `<div class="stack">
     <p class="txt">${head}</p>
     <div class="box"><div class="box-body">
-      <p class="txt"><b>${tr.steps.length}</b> passes through the model: ${generated} tokens of answer${tr.finished ? " plus the end-of-turn token" : ""}.</p>
-      <p class="txt"><b>${notTop}</b> of ${tr.steps.length} picks were not the single most likely token.</p>
-      <p class="txt">The question plus the answer is now <b>${tr.promptTokens.length + tr.steps.length}</b> tokens. If you ask a follow-up, all of it is sent again – the model has no memory between turns.</p>
+      <p class="txt">${tx("passes", tr.steps.length, generated, tr.finished)}</p>
+      <p class="txt">${tx("notTop", notTop, tr.steps.length)}</p>
+      <p class="txt">${tx("total", tr.promptTokens.length + tr.steps.length)}</p>
     </div></div>
-    <div class="box"><div class="box-head"><span class="label">The same question at every temperature – real runs of the model</span></div>
-      <div class="box-body"><div class="runs">${runs}</div><p class="note">Pick a temperature to watch that answer being written.</p></div></div>
-    <p class="note">Big chat models work exactly the same way. They have hundreds of billions of parameters instead of ${esc(d.params)}, so their guesses are much better – but they still write one token at a time.</p>
+    <div class="box"><div class="box-head"><span class="label">${tx("allTemps")}</span></div>
+      <div class="box-body"><div class="runs">${runs}</div><p class="note">${tx("pickTemp")}</p></div></div>
+    <p class="note">${tx("bigModels", tx(d.paramsKey))}</p>
   </div>`;
 }
 
-const MB = (bytes) => `${Math.round(bytes / 1e6).toLocaleString("en")} MB`;
+const MB = (bytes) => `${num(Math.round(bytes / 1e6))} MB`;
 
 /** Right-hand panel before a live answer exists: how it works, download, question. */
 function liveSetupBody() {
@@ -832,42 +1095,42 @@ function liveSetupBody() {
 
   if (st === "idle") {
     action = (L.gpu === "no"
-      ? `<div class="callout callout-yellow"><h3>Warning: this browser has no WebGPU</h3><p>The live model needs the graphics card through WebGPU. Open this page in Chrome or Edge – or use the recorded SmolLM2 examples.</p></div>`
+      ? `<div class="callout callout-yellow"><h3>${tx("noGpuTitle")}</h3><p>${tx("noGpuText")}</p></div>`
       : "") +
-      `<div class="row"><button class="btn btn-primary" data-action="live-load"${L.gpu === "yes" ? "" : " disabled"}>Download and start the model</button>
-        <span class="note">${L.gpu === "yes" ? "WebGPU found – the model will run on the graphics card." : L.gpu === "checking" ? "Checking for WebGPU…" : "WebGPU is missing."}</span></div>`;
+      `<div class="row"><button class="btn btn-primary" data-action="live-load"${L.gpu === "yes" ? "" : " disabled"}>${tx("loadBtn")}</button>
+        <span class="note">${L.gpu === "yes" ? tx("gpuYes") : L.gpu === "checking" ? tx("gpuChecking") : tx("gpuNo")}</span></div>`;
   } else if (st === "loading") {
     action = !downloaded
-      ? `<div class="progress"><span class="progress-label">${dl.total ? `Downloading the model: ${MB(dl.loaded)} of ${MB(dl.total)}` : "Starting the download…"}</span>
-          <div class="bar" role="progressbar" aria-label="Download" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${dl.total ? (dl.loaded / dl.total) * 100 : 0}"><div class="bar-fill" style="width:${dl.total ? ((dl.loaded / dl.total) * 100).toFixed(1) : 0}%"></div></div></div>`
-      : `<div class="row"><span class="spinner" aria-hidden="true"></span><span class="progress-label">Loading the model into memory…</span></div>`;
+      ? `<div class="progress"><span class="progress-label">${dl.total ? tx("downloading", MB(dl.loaded), MB(dl.total)) : tx("dlStart")}</span>
+          <div class="bar" role="progressbar" aria-label="${tx("dlAria")}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${dl.total ? (dl.loaded / dl.total) * 100 : 0}"><div class="bar-fill" style="width:${dl.total ? ((dl.loaded / dl.total) * 100).toFixed(1) : 0}%"></div></div></div>`
+      : `<div class="row"><span class="spinner" aria-hidden="true"></span><span class="progress-label">${tx("loadingMem")}</span></div>`;
   } else if (st === "error") {
-    action = `<div class="callout callout-red" role="alert"><h3>The model could not start</h3><p>${esc(L.error ?? "")}</p></div>
-      <div class="row"><button class="btn" data-action="live-load">Try again</button></div>`;
+    action = `<div class="callout callout-red" role="alert"><h3>${tx("startFail")}</h3><p>${esc(L.error ?? "")}</p></div>
+      <div class="row"><button class="btn" data-action="live-load">${tx("retry")}</button></div>`;
   } else {
-    action = `${L.error ? `<div class="callout callout-red"><h3>Generation failed</h3><p>${esc(L.error)}</p></div>` : ""}
-      <p class="note">Model ready on the graphics card (WebGPU).</p>
-      <div class="field"><label class="label" for="live-q">Your question</label>
+    action = `${L.error ? `<div class="callout callout-red"><h3>${tx("genFail")}</h3><p>${esc(L.error)}</p></div>` : ""}
+      <p class="note">${tx("modelReady")}</p>
+      <div class="field"><label class="label" for="live-q">${tx("yourQuestion")}</label>
         <textarea class="input" id="live-q" rows="2"${busy ? " disabled" : ""}>${esc(L.question)}</textarea></div>
-      <div class="row"><span class="note">Examples:</span>${LIVE_EXAMPLES.map((q) => `<button class="btn btn-sm" data-action="live-example" data-q="${esc(q)}"${busy ? " disabled" : ""}>${esc(q)}</button>`).join("")}</div>
-      <p class="note">Tip: ask for a set length (“in two sentences”, “a haiku”) – open questions often run past the ${LIVE_MAX_NEW}-token limit.</p>
-      <div class="row"><button class="btn btn-primary" data-action="live-ask"${st === "ready" && L.question.trim() ? "" : " disabled"}>Write the answer at ${LIVE_TEMPS.length} temperatures</button>
-        ${liveCount() > 0 && st === "ready" ? `<button class="btn btn-text" data-action="live-back">Back to the explanation</button>` : ""}</div>
+      <div class="row"><span class="note">${tx("examples")}</span>${liveExamples().map((q) => `<button class="btn btn-sm" data-action="live-example" data-q="${esc(q)}"${busy ? " disabled" : ""}>${esc(q)}</button>`).join("")}</div>
+      <p class="note">${tx("tip", LIVE_MAX_NEW)}</p>
+      <div class="row"><button class="btn btn-primary" data-action="live-ask"${st === "ready" && L.question.trim() ? "" : " disabled"}>${tx("askBtn", LIVE_TEMPS.length)}</button>
+        ${liveCount() > 0 && st === "ready" ? `<button class="btn btn-text" data-action="live-back">${tx("backToExpl")}</button>` : ""}</div>
       ${busy ? `<div class="box"><div class="box-body">
-        <div class="progress"><span class="progress-label">${g ? `Temperature ${g.temperature}: token ${g.step}` : "Reading the question…"}</span>
-          <div class="bar" role="progressbar" aria-label="Writing the answers" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${overall}"><div class="bar-fill" style="width:${overall.toFixed(1)}%"></div></div></div>
-        <p class="note">One answer per temperature (${LIVE_TEMPS.join(", ")}), up to ${LIVE_MAX_NEW} tokens each – you can watch them being written in the chat on the left. For every token the app records the model's top ${LIVE_TOPK} chances and the token it drew; the explanation then replays them step by step.</p>
-        <div class="row"><button class="btn btn-sm btn-text" data-action="live-cancel">Cancel</button></div></div></div>` : ""}`;
+        <div class="progress"><span class="progress-label">${g ? tx("genProgress", tempLabel(g.temperature), g.step) : tx("readingQ")}</span>
+          <div class="bar" role="progressbar" aria-label="${tx("genAria")}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${overall}"><div class="bar-fill" style="width:${overall.toFixed(1)}%"></div></div></div>
+        <p class="note">${tx("genNote", tempList(), LIVE_MAX_NEW, LIVE_TOPK)}</p>
+        <div class="row"><button class="btn btn-sm btn-text" data-action="live-cancel">${tx("cancel")}</button></div></div></div>` : ""}`;
   }
 
   return `<div class="stack" data-live-status="${st}">
-    <p class="txt">LFM3-1.7B is a chat model from Liquid AI with <b>1.7 billion</b> parameters – about 13 times bigger than the recorded SmolLM2 model. It runs entirely on this computer: the browser downloads it once (about 1.3 GB, kept in the browser's cache) and your question never leaves this page. It needs a browser with WebGPU (Chrome or Edge) to use the graphics card.</p>
+    <p class="txt">${tx("liveIntro")}</p>
     <div class="callout callout-blue" data-testid="live-how">
-      <h3>How the live mode works: first real answers, then the replay</h3>
-      <p><b>1. The model writes the real answers first.</b> When you press the button, LFM3 answers your question ${LIVE_TEMPS.length} times, once per temperature (${LIVE_TEMPS.join(", ")}). This is ordinary generation, one token at a time, exactly as in a chat app.</p>
-      <p><b>2. Every step is written down.</b> Before each token is chosen, the app saves the model's real chances for the top ${LIVE_TOPK} tokens (out of all 128,000) and then the token that was drawn with those chances. The model continues from that token, so the saved steps add up to its real answer.</p>
-      <p><b>3. The chat replays that run.</b> The explanation then plays the saved steps back as slowly as you like – the template, the tokens, the chances and every pick. Nothing is recomputed or made up: the chat shows the answer the model really wrote, and each bar is the chance it really gave.</p>
-      <p>Why record first instead of showing it live? The model is fast (about 10–30 tokens a second), far too fast to follow. With the run saved, you can step back and forth, and switch temperatures to compare real answers side by side.</p>
+      <h3>${tx("howTitle")}</h3>
+      <p>${tx("how1", LIVE_TEMPS.length, tempList())}</p>
+      <p>${tx("how2", LIVE_TOPK)}</p>
+      <p>${tx("how3")}</p>
+      <p>${tx("how4")}</p>
     </div>
     ${action}
   </div>`;
@@ -875,12 +1138,31 @@ function liveSetupBody() {
 
 // ─── Render: panels ───
 
+/** Text in the static markup (header, headings, buttons) and the language switch. */
+function renderStatic() {
+  if (document.documentElement.lang === S.lang && el.lang.dataset.done === S.lang) return;
+  document.documentElement.lang = S.lang;
+  document.title = tx("docTitle");
+  for (const n of document.querySelectorAll("[data-i18n]")) n.textContent = tx(n.dataset.i18n);
+  for (const n of document.querySelectorAll("[data-i18n-html]")) n.innerHTML = tx(n.dataset.i18nHtml);
+  for (const n of document.querySelectorAll("[data-i18n-aria]")) n.setAttribute("aria-label", tx(n.dataset.i18nAria));
+  for (const n of document.querySelectorAll("[data-i18n-content]")) n.setAttribute("content", tx(n.dataset.i18nContent));
+  for (const b of el.lang.querySelectorAll("button")) {
+    const on = b.dataset.lang === S.lang;
+    b.setAttribute("aria-checked", String(on));
+    b.tabIndex = on ? 0 : -1;
+  }
+  el.lang.dataset.done = S.lang;
+  pickerHtml = ""; // the "Ask your own question" option is translated too
+}
+
+
 function renderPickers() {
   el.model.value = S.source;
   const setup = showSetup();
   const qs = setup && liveCount() === 0 ? [] : data().questions;
   const opts = qs.map((q, i) => `<option value="${i}">${esc(q.question)}</option>`);
-  if (S.source === "live") opts.push(`<option value="new">Ask your own question…</option>`);
+  if (S.source === "live") opts.push(`<option value="new">${tx("askOwn")}</option>`);
   const html = opts.join("");
   if (html !== pickerHtml) el.question.innerHTML = pickerHtml = html;
   el.question.value = setup ? "new" : String(S.view.trace);
@@ -893,12 +1175,12 @@ function renderChat() {
     let html = q ? `<div class="msg msg-user"><div class="bubble">${esc(q)}</div></div>` : "";
     if (L.status === "generating") {
       html += `<div class="msg msg-bot"><span class="avatar" aria-hidden="true">A</span><div class="bubble"><span class="keep-lines" data-testid="live-preview">${esc(L.generation?.answer || "…")}<span class="caret">▍</span></span></div></div>`;
-      if (L.generation) html += `<p class="sys">Writing the answer at temperature ${L.generation.temperature}</p>`;
+      if (L.generation) html += `<p class="sys">${tx("writingAt", tempLabel(L.generation.temperature))}</p>`;
     } else {
-      html += `<p class="sys">${L.status === "ready" ? "Model ready – send the question from the panel on the right" : L.status === "loading" ? "Loading the model…" : "The model is not loaded yet – start it on the right"}</p>`;
+      html += `<p class="sys">${L.status === "ready" ? tx("chatReady") : L.status === "loading" ? tx("chatLoading") : tx("chatNotLoaded")}</p>`;
     }
     el.chat.innerHTML = `<div class="chat">${html}</div>`;
-    el.chatFoot.textContent = "LFM3-1.7B (1.7 billion parameters) runs in this browser on the graphics card.";
+    el.chatFoot.textContent = tx("footSetup");
     return { answer: "" };
   }
   const d = data();
@@ -911,18 +1193,16 @@ function renderChat() {
   const { thinking, answer } = answerParts(tr, shownCount(v, tr));
   let html = `<div class="msg msg-user"><div class="bubble">${esc(tr.question)}</div></div>`;
   if (v.stage < STAGE.score) {
-    html += `<p class="sys">Sent – waiting for the answer…</p>`;
+    html += `<p class="sys">${tx("sent")}</p>`;
   } else {
     html += `<div class="msg msg-bot"><span class="avatar" aria-hidden="true">A</span><div class="bubble">` +
-      (thinking !== null ? `<div class="thinking" data-testid="chat-thinking"><b>Thinking – a draft, which chat apps hide or fold away</b><span class="keep-lines">${esc(thinking)}</span></div>` : "") +
+      (thinking !== null ? `<div class="thinking" data-testid="chat-thinking"><b>${tx("thinkingLabel")}</b><span class="keep-lines">${esc(thinking)}</span></div>` : "") +
       `<span class="keep-lines" data-testid="chat-answer">${esc(answer || (isGenerating ? "…" : ""))}${isGenerating && answer ? '<span class="caret">▍</span>' : ""}</span></div></div>`;
   }
-  if (atEnd) html += `<p class="sys">${tr.finished ? "Answer complete" : "Cut off – the app's length limit was reached"}</p>`;
+  if (atEnd) html += `<p class="sys">${tr.finished ? tx("done") : tx("cutOff")}</p>`;
   el.chat.innerHTML = `<div class="chat">${html}</div>`;
-  el.chatFoot.textContent = (d.source === "live"
-    ? `Written live in this browser by ${modelName(d)} (${d.params} parameters), then replayed here token by token from its real run.`
-    : `Recorded from the real model ${modelName(d)} (${d.params} parameters) running on this computer.`) +
-    " Every number in the explanation is its real output.";
+  el.chatFoot.textContent = (d.source === "live" ? tx("footLive", modelName(d), tx(d.paramsKey)) : tx("footRecorded", modelName(d), tx(d.paramsKey))) +
+    tx("footReal");
   return { answer };
 }
 
@@ -931,7 +1211,7 @@ function renderStage() {
   el.stepper.hidden = setup;
   el.controls.hidden = setup;
   if (setup) {
-    el.progress.textContent = "Run LFM3-1.7B in your browser";
+    el.progress.textContent = tx("runLive");
     el.stage.innerHTML = liveSetupBody();
     return;
   }
@@ -939,9 +1219,9 @@ function renderStage() {
   const v = S.view;
   const atEnd = v.stage === STAGE.stop;
   el.progress.textContent = v.stage < STAGE.score
-    ? `Stage ${v.stage + 1} of ${STAGES.length}`
-    : atEnd ? `Done – ${tr.steps.length} tokens` : `Token ${v.step + 1} of ${tr.steps.length}`;
-  el.stepper.innerHTML = STAGES.map((s, i) => {
+    ? tx("stageOf", v.stage + 1, STAGE_COUNT)
+    : atEnd ? tx("doneTokens", tr.steps.length) : tx("tokenOf", v.step + 1, tr.steps.length);
+  el.stepper.innerHTML = tx("stages").map((s, i) => {
     const cls = i === v.stage ? "active" : i < v.stage ? "done" : "";
     return `<li><button class="step ${cls}" data-action="goto" data-index="${i}"${i === v.stage ? ' aria-current="step"' : ""}>` +
       `<span class="step-n">${i < v.stage ? "✓" : i + 1}</span><span class="step-t"><b>${s.label}</b><small>${s.description}</small></span></button></li>`;
@@ -952,10 +1232,11 @@ function renderStage() {
   set("next", atEnd);
   set("next-token", atEnd);
   set("play", atEnd);
-  el.play.innerHTML = `<svg class="ic" aria-hidden="true"><use href="#i-${S.isPlaying ? "pause" : "play"}"/></svg>${S.isPlaying ? "Pause" : "Play"}`;
+  el.play.innerHTML = `<svg class="ic" aria-hidden="true"><use href="#i-${S.isPlaying ? "pause" : "play"}"/></svg>${tx(S.isPlaying ? "pause" : "play")}`;
 }
 
 function render() {
+  renderStatic();
   if (S.view.stage === STAGE.stop || showSetup()) S.isPlaying = false; // nothing left to play
   renderPickers();
   const { answer } = renderChat();
@@ -964,7 +1245,7 @@ function render() {
   Object.assign(el.app.dataset, {
     trace: v.trace, stage: v.stage, step: v.step, temperature: v.temp,
     answerLength: answer.length, playing: String(S.isPlaying),
-    source: S.source, liveStatus: S.live.status,
+    source: S.source, liveStatus: S.live.status, lang: S.lang,
   });
   schedulePlay();
 }
@@ -1014,6 +1295,25 @@ function chooseQuestion(value) {
   go((v) => ({ ...v, trace: Number(value), stage: STAGE.template, step: 0 }));
 }
 
+/** Switch the page language; an untouched example question follows the language. */
+function setLang(lang) {
+  if (!LANGS.includes(lang) || lang === S.lang) return;
+  const wasExample = liveExamples().indexOf(S.live.question);
+  S.lang = lang;
+  try { localStorage.setItem(LANG_KEY, lang); } catch {}
+  if (wasExample !== -1 || !S.live.question) S.live.question = liveExamples()[Math.max(0, wasExample)];
+  render();
+}
+
+/** Language: ?lang= in the address, then the saved choice, then Polish. */
+function initLang() {
+  let saved = null;
+  try { saved = localStorage.getItem(LANG_KEY); } catch {}
+  const asked = new URLSearchParams(location.search).get("lang");
+  S.lang = [asked, saved].find((l) => LANGS.includes(l)) ?? "pl";
+  S.live.question = liveExamples()[0];
+}
+
 // ─── Live model ───
 
 async function checkWebGPU() {
@@ -1053,7 +1353,7 @@ async function liveLoad() {
       temperatures: LIVE_TEMPS,
       topK: LIVE_TOPK,
       eosId: Array.isArray(eos) ? eos[0] : eos,
-      params: "1.7 billion",
+      paramsKey: "paramsLive",
       source: "live",
       questions: [],
     };
@@ -1233,6 +1533,7 @@ document.addEventListener("click", (e) => {
   else if (a === "live-ask") liveAsk();
   else if (a === "live-cancel") { cancelRequested = true; }
   else if (a === "live-back") { S.composing = false; render(); }
+  else if (a === "lang") setLang(btn.dataset.lang);
   else if (a === "live-example") { S.live.question = btn.dataset.q; render(); }
 });
 
@@ -1259,6 +1560,13 @@ document.addEventListener("keydown", (e) => {
     }
     return;
   }
+  const langRadio = e.target.closest?.('[role="radio"][data-action="lang"]');
+  if (langRadio && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
+    e.preventDefault();
+    setLang(langRadio.dataset.lang === "pl" ? "en" : "pl");
+    el.lang.querySelector(`[data-lang="${S.lang}"]`)?.focus();
+    return;
+  }
   // Leave browser shortcuts alone (Alt+← is "back", ⌘+← is "home").
   if (e.altKey || e.ctrlKey || e.metaKey) return;
   if (showSetup() || e.target.closest("input, textarea, select")) return;
@@ -1272,6 +1580,7 @@ el.question.addEventListener("change", () => chooseQuestion(el.question.value));
 
 // ─── Init ───
 
+initLang();
 render();
 checkWebGPU();
 

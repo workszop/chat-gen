@@ -3,7 +3,14 @@
 A visual explainer of text generation in chat apps. Plain HTML, CSS and JavaScript: no
 framework, no build step, no npm. Design: edulab (edustyl tokens).
 
-**Live:** https://workszop.github.io/chat-gen/ (GitHub Pages from `main`)
+**Live:** https://odpowiedz-czatu.warsztaty-ai.com/ (GitHub Pages from `main`)
+
+**Languages:** Polish (default) and English. The PL/EN switch sits in the header; the choice
+is saved in `localStorage` (`chat-gen.lang`) and `?lang=pl` / `?lang=en` overrides it. All UI
+text lives in the `T = { pl, en }` table in `index.html`, read through `tx(key, ...args)`
+(not `t`, which the code uses for tokens). The recorded SmolLM2 examples stay in English,
+because the 135M model only writes English; the Polish page says so. The live mode offers
+Polish example questions.
 
 Left: what you see – a chat window where the answer appears token by token.
 Right: what happens behind it, in five stages:
@@ -77,5 +84,5 @@ and the answers turn into garbage. There is no CPU fallback: the 4-bit export us
 ## DOM contract
 
 `#app` carries `data-trace`, `data-stage`, `data-step`, `data-temperature`,
-`data-answer-length`, `data-playing`, `data-source` and `data-live-status`. Probability rows
+`data-answer-length`, `data-playing`, `data-source`, `data-live-status` and `data-lang`. Probability rows
 carry `data-chosen="true"` for the picked token, Stop-stage rows `data-run`.
