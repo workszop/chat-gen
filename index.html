@@ -95,7 +95,12 @@ b, strong { color: var(--ink); font-weight: 600; }
 .edu-header-inner { padding: 8px var(--gutter); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .edu-logo { width: 64px; height: 64px; display: block; margin-right: -6px; }
 .edu-wordmark { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: -.02em; color: var(--ink); }
-.edu-app-title { margin: 0 0 0 14px; padding-left: 14px; border-left: 1px solid var(--line-2, #d9d3c7); font-family: var(--font-display); font-weight: 600; font-size: 19px; letter-spacing: -.01em; line-height: 1.2; color: var(--ink-2, #4a4540); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+.edu-app-title { margin: 0 0 0 14px; padding-left: 14px; border-left: 1px solid var(--line-2, #d9d3c7); font-family: var(--font-display); font-weight: 600; font-size: 38px; letter-spacing: -.02em; line-height: 1.1; color: var(--ink-2, #4a4540); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+/* Step the title down where 38px would squeeze the selects on the one-row bar (≥1200px) or be truncated (checked in PL and EN) */
+@media (min-width: 1200px) and (max-width: 1767px) { .edu-app-title { font-size: 30px; } }
+@media (min-width: 1200px) and (max-width: 1639px) { .edu-app-title { font-size: 24px; } }
+@media (min-width: 1200px) and (max-width: 1551px) { .edu-app-title { font-size: 19px; letter-spacing: -.01em; line-height: 1.2; } }
+@media (min-width: 641px) and (max-width: 695px) { .edu-app-title { font-size: 30px; } }
 @media (max-width: 640px) { .edu-app-title { font-size: 15px; margin-left: 10px; padding-left: 10px; } }
 .grow { flex: 1; }
 /* Wide screens: keep the bar on one row – the question/model selects give way before the title does */
